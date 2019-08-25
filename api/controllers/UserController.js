@@ -6,8 +6,7 @@ const UserService = require('../services/UserService');
 module.exports = {
     login,
     register,
-    // refreshToken,
-    // verify,
+    refreshToken,
     // forgotPassword
 };
 /**
@@ -36,3 +35,17 @@ function register(req, res, next) {
         res.json(yield UserService.register(req.auth, req.swagger.params, req.body));
     }).catch(next);
 }
+
+/**
+ * POST /users/refreshtoken
+ * Validate the access token and issue a new access token, non-anonymous
+ *
+ * @param req the request
+ * @param res the response
+ * @param next the next step in the middleware flow
+ */
+function refreshToken(req, res, next) {
+    co(function* (){
+      res.json(yield UserService.refreshToken(req.auth, req.swagger.params, req.body));
+    }).catch(next);
+  }

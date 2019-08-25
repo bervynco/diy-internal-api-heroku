@@ -23,8 +23,7 @@ const Activity = models.Activity;
 module.exports = {
     login,
     register,
-    // refreshToken,
-    // verify,
+    refreshToken,
     // forgotPassword
 };
 
@@ -118,4 +117,30 @@ function* register(auth, params, entity) {
         .catch(function (err) {
             throw err;
         });
+}
+
+/**
+ * POST /users/refreshtoken
+ * Validate the access token and issue a new access token, non-anonymous
+ *
+ * @param auth the authorized user
+ * @param params the parameters for the method
+ */
+function* refreshToken(auth, params, entity) {
+    params = _.mapValues(params, function(v) {
+        return v.value;
+    });
+    console.log("TOKEN", auth.token)
+    const accessToken = jwt.refresh(auth.token, config.jwt.SECRET, {
+        expiresIn: config.jwt.EXPIRATION_TIME
+    });
+
+    const refreshToken = jwt.refresh(auth.token, config.jwt.SECRET, {
+        expiresIn: config.jwt.EXPIRATION_TIME * 100
+    });
+  
+    return {
+        accessToken: accessToken,
+        refreshToken: refreshToken
+    };
 }

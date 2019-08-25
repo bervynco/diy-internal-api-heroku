@@ -17,12 +17,7 @@ const UserRole = models.UserRole;
 
 module.exports = {
     getAllUsers,
-    // getUserDetail,
-    // deleteUser,
-    // updateUserDetail,
-    // getUserActivities,
-    addUser,
-    // bulkDeleteAdminUsers
+    addUser
 };
 
 /**
