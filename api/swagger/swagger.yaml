@@ -1,0 +1,254 @@
+swagger: "2.0"
+info:
+  version: "0.0.1"
+  title: DIY Internal REST API
+# during dev, should point to your local machine
+host: localhost:3494
+# basePath prefixes all resource paths 
+basePath: /api/v1
+# 
+schemes:
+  # tip: remove http to make production-grade
+  - http
+  - https
+# format of bodies a client can send (Content-Type)
+consumes:
+  - application/json
+# format of the responses to the client (Accepts)
+produces:
+  - application/json
+securityDefinitions:
+  jwt:
+    type: apiKey
+    name: Authorization
+    in: header
+paths:
+  /hello:
+    # binds a127 app logic to a route
+    x-swagger-router-controller: hello_world
+    get:
+      description: Returns 'Hello' to the caller
+      # used as the method name of the controller
+      operationId: hello
+      parameters:
+        - name: name
+          in: query
+          description: The name of the person to whom to say hello
+          required: false
+          type: string
+      responses:
+        "200":
+          description: Success
+          schema:
+            # a pointer to a definition
+            $ref: "#/definitions/HelloWorldResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /users/login:
+    x-swagger-router-controller: UserController
+    post:
+      description: "user login, anonymous"
+      operationId: login
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: "email and password"
+          required: true
+          schema:
+            $ref: "#/definitions/LoginReq"
+      responses:
+        "200":
+          description: "access token and refresh token"
+          schema:
+            $ref: "#/definitions/LoginRes"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "invalid username or password"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "404":
+          description: "user not found with specified email"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /users/appusers:
+    x-swagger-router-controller: AdminUserController
+    post:
+      description: "Add a new user. non-anonymous, super-admin and admin only"
+      operationId: addUser
+      security:
+        - jwt: []
+      x-access-control:
+        role: 
+          - "admin" 
+          - "super-admin"
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: body
+          name: body
+          description: "the details of the new user"
+          required: true
+          schema:
+            $ref: "#/definitions/RegisterReq"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: object
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+    get:
+      description: "Gets the list of all users. non-anonymous"
+      operationId: getAllUsers
+      security:
+        - jwt: []
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/MinAppUser"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /swagger:
+    x-swagger-pipe: swagger_raw
+# complex objects have schema definitions
+definitions:
+  LoginReq:
+    type: object
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+      - email
+      - password
+  LoginRes:
+    type: object
+    required:
+      - accessToken
+      - refreshToken
+    properties:
+      # the access token
+      accessToken:
+        type: string
+        description: "the access token that can be used as Authorization header"
+      refreshToken:
+        type: string
+        description: "the refresh token that can be used to obtain a new access token in case of remember me"
+  HelloWorldResponse:
+    required:
+      - message
+    properties:
+      message:
+        type: string
+  ErrorResponse:
+    required:
+      - message
+    properties:
+      message:
+        type: string
+  ErrorDetail:
+    type: object
+    required:
+      - message
+      - code
+    properties:
+      code:
+        type: string
+        description: "the error code for future reference"
+      message:
+        type: string
+        description: "the detailed description/cause of the error"
+  RegisterReq:
+    type: object
+    required:
+      - email
+      - password
+    properties:
+      lastName:
+        type: string
+      firstName:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+  MinAppUser:
+    type: object
+    required:
+      - id
+      - email
+    properties:
+      id:
+        type: number
+        description: "the user's unique id"
+      firstName:
+        type: 
+          - string
+          - 'null'
+        description: "the user's first name"
+      lastName:
+        type: 
+          - string
+          - 'null'
+        description: "the user's last name"
+      email:
+        type: string
+        description: "the user's email"
+      status:
+        type: string
+        description: "the user's status"
+      role:
+        type: string
+        description: "the user's role"
+      createdAt:
+        type: string
+        description: "the date the user was created"
+      creator:
+        type: 
+          - string
+          - 'null'
+        description: "the user who added this user"
+      lastLogin:
+        type: 
+          - string
+          - 'null'
+        description: "the date when was the user last login"
