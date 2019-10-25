@@ -5,19 +5,23 @@ const utils = require('../helpers/utils');
 const db = require('../helpers/db');
 const models = require('../models');
 const config = require('config');
-const _ = require('lodash');
 
+const _ = require('lodash');
 const co = require('co');
+const moment = require('moment');
 
 const sequelize = models.sequelize;
 const Sequelize = models.Sequelize;
 
 const User = models.User;
 const UserRole = models.UserRole;
+const Customer = models.Customer;
 
 module.exports = {
     getAllUsers,
-    addUser
+    getAllCustomers,
+    addUser,
+    deleteUser
 };
 
 /**
@@ -34,6 +38,41 @@ function* getAllUsers(auth, params, entity) {
     let users = yield db.retrieveUsers();
     return users;
 }
+
+/**
+ * Get all the customers.
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Object}    [params]      the parameters for the method
+ */
+function* getAllCustomers(auth, params, entity) {
+    params = _.mapValues(params, function (v) {
+        return v.value;
+    });
+    var customers = yield Customer.findAll();
+    for (let i = 0; i < customers.length; i++) {
+        customers[i]["birthday"] = moment.utc(customers[i]["birthday"]).format('YYYY-MM-DD');
+        customers[i] = _.omit(customers[i].toJSON(), 'password', 'resetPasswordToken');
+    };
+    console.log(customers)
+    return customers;
+}
+
+/**
+ * Find a customer by id.
+ * If customer is not found throw NotFound
+ *
+ * @param   {Number}    id            the customer id
+ */
+function* findCustomerById(id) {
+    const customer = yield Customer.findByPk(id);
+
+    if (!customer) {
+        throw new errors.NotFound('Customer not found with specified id');
+    }
+
+    return customer;
+};
 
 /**
  * Add a user.
@@ -64,4 +103,16 @@ function* addUser(auth, entity) {
     })).catch(function (err) {
         throw err;
     });
+}
+
+/**
+ * Delete an admin user.
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Number}    id            the user id
+ */
+function* deleteUser(auth, id) {
+    const user = yield User.findByPk(id);
+    user.status = 'in-active';
+    yield user.save();
 }

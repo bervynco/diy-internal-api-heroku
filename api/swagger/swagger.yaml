@@ -177,6 +177,144 @@ paths:
           description: "access token is not valid"
           schema:
             $ref: "#/definitions/ErrorDetail"
+  /users/customers:
+    x-swagger-router-controller: AdminUserController
+    get:
+      description: "Gets the list of all customers. non-anonymous"
+      operationId: getAllCustomers
+      security:
+        - jwt: []
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Customers"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /users/customers/profile:
+    x-swagger-router-controller: AdminUserController
+    get:
+      description: "Gets the details of the customer. non-anonymous"
+      operationId: findCustomerById
+      security:
+        - jwt: []
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Customers"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /users/admins/{id}:
+    x-swagger-router-controller: AdminUserController
+    get:
+      description: "Get details of a user. This user is admin user. non-anonymous, super-admin and admin users"
+      operationId: getUserDetail
+      security:
+        - jwt: []
+      x-access-control:
+        role: 
+          - "admin" 
+          - "super-admin"
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: path
+          name: id
+          description: "the admin user id"
+          required: true
+          type: number
+          format: long
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/AdminUser"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "404":
+          description: "if the specified entity with id is not found"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+    delete:
+      description: "Delete an admin user. non-anonymous, super-admin and admin users"
+      operationId: deleteUser
+      security:
+        - jwt: []
+      x-access-control:
+        role: 
+          - "admin" 
+          - "super-admin"
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: path
+          name: id
+          description: "the admin user id"
+          required: true
+          type: number
+          format: long
+      responses:
+        "200":
+          description: "successful operation"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "404":
+          description: "if the specified entity with id is not found"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
   /swagger:
     x-swagger-pipe: swagger_raw
 # complex objects have schema definitions
@@ -283,3 +421,54 @@ definitions:
           - string
           - 'null'
         description: "the date when was the user last login"
+  Customers:
+    type: object
+    required:
+      - id
+      - email
+    properties:
+      id:
+        type: number
+        description: "the customer's unique id"
+      firstName:
+        type: 
+          - string
+          - 'null'
+        description: "the customer's first name"
+      lastName:
+        type: 
+          - string
+          - 'null'
+        description: "the customer's last name"
+      email:
+        type: string
+        description: "the customer's email"
+      gender:
+        type: 
+          - string
+          - 'null'
+        description: "the customer's gender"
+      isActive:
+        type: boolean
+        description: "the customer's active status"
+      city:
+        type: 
+          - string
+          - 'null'
+        description: "the customer's city"
+      birthday:
+        type: 
+          - string
+          - 'null'
+        description: "the customer's birthday"
+      contactNumber:
+        type: 
+          - string
+          - 'null'
+        description: "the customer's contact number"
+      createdAt:
+        type: string
+        description: "the date the customer was created"
+      updatedAt:
+        type: string
+        description: "the date when was the customer details modified"
