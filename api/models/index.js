@@ -13,12 +13,14 @@ const sequelize = new Sequelize(config.db.url.uat, {
   const UserRoleFn = require('./user_roles');
   const ActivityFn = require('./activities');
   const CustomerFn = require('./customers');
+  const CustomerTransactionFn = require('./customer_transactions');
 //   const PasswordFn = require('./passwords');
 
   const User = UserFn(sequelize, Sequelize.DataTypes);
   const UserRole = UserRoleFn(sequelize, Sequelize.DataTypes);
   const Activity = ActivityFn(sequelize, Sequelize.DataTypes);
   const Customer = CustomerFn(sequelize, Sequelize.DataTypes);
+  const CustomerTransaction = CustomerTransactionFn(sequelize, Sequelize.DataTypes);
 //   const Password = PasswordFn(sequelize, Sequelize.DataTypes);
 
   module.exports = {
@@ -27,6 +29,7 @@ const sequelize = new Sequelize(config.db.url.uat, {
       User,
       UserRole,
       Activity,
-      Customer
+      Customer,
+      CustomerTransaction
     //   Password
   };

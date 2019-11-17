@@ -16,10 +16,12 @@ const Sequelize = models.Sequelize;
 const User = models.User;
 const UserRole = models.UserRole;
 const Customer = models.Customer;
+const CustomerTransaction = models.CustomerTransaction;
 
 module.exports = {
     getAllUsers,
     getAllCustomers,
+    getCustomerTransactions,
     addUser,
     deleteUser
 };
@@ -115,4 +117,23 @@ function* deleteUser(auth, id) {
     const user = yield User.findByPk(id);
     user.status = 'in-active';
     yield user.save();
+}
+
+/**
+ * Get all transactions of the customer.
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Object}    [params]      the parameters for the method
+ */
+function* getCustomerTransactions(auth, id, entity) {
+    var user = yield Customer.findByPk(id);
+    if (!user) {
+        throw new errors.NotFound('User not found');
+    }
+    var transactions = yield CustomerTransaction.findAll({
+        where: { customerId: id },
+        order: [['createdAt', 'ASC']]
+    });
+    
+    return transactions;
 }

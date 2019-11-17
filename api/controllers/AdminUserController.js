@@ -6,6 +6,7 @@ const AdminUserService = require('../services/AdminUserService');
 module.exports = {
     getAllUsers,
     getAllCustomers,
+    getCustomerTransactions,
     // getUserDetail,
     deleteUser,
     // updateUserDetail,
@@ -35,6 +36,18 @@ function getAllUsers(req, res, next) {
 function getAllCustomers(req, res, next) {
     co(function* () {
         res.json(yield AdminUserService.getAllCustomers(req.auth, req.swagger.params));
+    }).catch(next);
+}
+
+/**
+ * Get all transactions of the customer.
+ *
+ * @param req the request
+ * @param res the response
+ */
+function getCustomerTransactions(req, res, next) {
+    co(function* () {
+        res.json(yield AdminUserService.getCustomerTransactions(req.auth, req.swagger.params.id.value));
     }).catch(next);
 }
 

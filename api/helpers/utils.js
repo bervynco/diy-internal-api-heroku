@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const nodemailer = require("nodemailer");
-
+const moment = require('moment');
 
 // var transporter = nodemailer.createTransport({
 //     service: 'gmail',
@@ -48,6 +48,29 @@ function* compare(hashed, to) {
     return yield bcrypt.compare(hashed, to);
 }
 
+function* chartSkeleton(chartKeys) {
+    let result = {
+        daily: {},
+        monthly: {},
+        yearly: {}
+    };
+    const endOfMonth   = moment().endOf('month').format('D');
+    for (let index = 1; index <= endOfMonth; index++) {
+        result["daily"]["Day " + index] = {};
+        chartKeys.forEach((key) => {
+            result["daily"]["Day " + index][key] = 0
+        });
+    }
+    const months = moment.months();
+    months.forEach((month) => {
+        result["monthly"][month] = {};
+        chartKeys.forEach((key) => {
+            result["monthly"][month][key] = 0
+        });
+    })
+    return result;
+}
+
 const email = function*(from, to, subject, body, attachment) {
     // var data = {
     //   Source: from,
@@ -89,5 +112,6 @@ const email = function*(from, to, subject, body, attachment) {
 module.exports = {
     hashString,
     compare,
+    chartSkeleton,
     email
   };

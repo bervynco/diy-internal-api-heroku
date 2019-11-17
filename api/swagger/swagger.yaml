@@ -208,6 +208,44 @@ paths:
           description: "access token is not valid"
           schema:
             $ref: "#/definitions/ErrorDetail"
+  /users/customers/{id}/transactions:
+    x-swagger-router-controller: AdminUserController
+    get:
+      description: "Gets the list of transaction of the customer. non-anonymous"
+      operationId: getCustomerTransactions
+      security:
+        - jwt: []
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: path
+          name: id
+          description: "the admin user id"
+          required: true
+          type: number
+          format: long
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Transactions"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  
   /users/customers/profile:
     x-swagger-router-controller: AdminUserController
     get:
@@ -272,6 +310,184 @@ paths:
             $ref: "#/definitions/ErrorDetail"
         "404":
           description: "if the specified entity with id is not found"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /users/email:
+    x-swagger-router-controller: AdminUserController
+    post:
+      description: "sends email to all customers"
+      operationId: sendEmailToCustomers
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: "email and password"
+          required: true
+          schema:
+            $ref: "#/definitions/LoginReq"
+      responses:
+        "200":
+          description: "access token and refresh token"
+          schema:
+            $ref: "#/definitions/LoginRes"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "invalid username or password"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "404":
+          description: "user not found with specified email"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /chart/priceRangeGender:
+    x-swagger-router-controller: ChartController
+    get:
+      description: "Gets the average transaction per gender. non-anonymous"
+      operationId: getPriceRangeGenderCombination
+      security:
+        - jwt: []
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Chart"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /chart/branchNewMembers:
+    x-swagger-router-controller: ChartController
+    get:
+      description: "Gets the count of new members per city. non-anonymous"
+      operationId: getBranchNewMembersCombination
+      security:
+        - jwt: []
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Chart"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /chart/genderDemographics:
+    x-swagger-router-controller: ChartController
+    get:
+      description: "Gets the count of males and females account. non-anonymous"
+      operationId: getGenderDemographicsCombination
+      security:
+        - jwt: []
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Chart"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /chart/customerAgeRange:
+    x-swagger-router-controller: ChartController
+    get:
+      description: "Gets the total number of males and females per age bracket. non-anonymous"
+      operationId: getCustomerAgeRangeCombination
+      security:
+        - jwt: []
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Chart"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /chart/livedCity:
+    x-swagger-router-controller: ChartController
+    get:
+      description: "Gets the number of members per city. non-anonymous"
+      operationId: getLivedCityCombination
+      security:
+        - jwt: []
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Chart"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
           schema:
             $ref: "#/definitions/ErrorDetail"
   /swagger:
@@ -431,3 +647,65 @@ definitions:
       updatedAt:
         type: string
         description: "the date when was the customer details modified"
+  Transactions:
+    type: object
+    required:
+      - createdAt
+      - transactionType
+      - amount
+    properties:
+      id:
+        type: number
+        description: "the transaction's unique id"
+      customerId:
+        type: number
+        description: "the customer's unique id"
+      wallet:
+        type: 
+          - string
+          - 'null'
+        description: "the customer's wallet"
+      transactionType:
+        type: string
+        description: "the transaction type, whether credit or debit"
+      amount:
+        type: number
+        format: double
+        description: "the amount of transaction"
+        maximum: 999999999
+        minimum: 0
+      description:
+        type: 
+          - string
+          - 'null'
+        description: "the transaction's description"
+      status:
+        type: string
+        description: "the customer's status, whether it is already approved or still pending"
+      expirationDate:
+        type: 
+          - string
+          - 'null'
+        description: "the datetime when will the amount expire"
+      createdAt:
+        type: string
+        description: "the date the customer was created"
+      updatedAt:
+        type: string
+        description: "the date when was the customer details modified"
+  Chart:
+    type: object
+    required:
+      - daily
+      - monthly
+      - yearly
+    properties:
+      daily:
+        type: object
+        description: "the average transaction per gender in a daily basis"
+      monthly:
+        type: object
+        description: "the average transaction per gender in a monthly basis"
+      yearly:
+        type: object
+        description: "the average transaction per gender in a yearly basis"
