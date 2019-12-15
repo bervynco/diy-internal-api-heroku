@@ -25,7 +25,8 @@ module.exports = {
     getBranchNewMembersCombination,
     getGenderDemographicsCombination,
     getCustomerAgeRangeCombination,
-    getLivedCityCombination
+    getLivedCityCombination,
+    getMembersCombination
 };
 
 
@@ -220,5 +221,74 @@ function* getLivedCityCombination(auth, params, entity) {
         result["yearly"][keyDate][day["city"]] = day["count"] / total;
     });
 
+    return result;
+}
+
+/**
+ * Gets the total number of members and total number of new members. non-anonymous
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Object}    [params]      the parameters for the method
+ */
+function* getMembersCombination(auth, params, entity) {
+    params = _.mapValues(params, function (v) {
+        return v.value;
+    });
+    let startDate = moment().subtract(1, 'month').endOf('month').format('YYYY-MM-DD');
+    let daily = yield db.retrieveMembersCount("date", startDate);
+    let dailyLastCount = yield db.retrieveMembersLastCount(startDate);
+    startDate = moment().format('YYYY') - 1;
+    let monthly = yield db.retrieveMembersCount("month", `${startDate}-12-31`);
+    let monthlyLastCount = yield db.retrieveMembersLastCount(startDate);
+    let yearly = yield db.retrieveMembersCount("year");
+    let result = yield utils.chartSkeleton(["total_count", "new_members_count"]);
+
+    var dailyObj = daily.reduce((obj, item) => (
+        obj[`Day ${moment(item.datetime).format("D")}`] = item.count, obj
+    ) ,{});
+    const currentDay = moment().format('D');
+    for (let i = 1; i <= currentDay; i++) {
+        var keyDate = `Day ${i}`;
+        if(i == 1) result["daily"][keyDate] = {
+            total_count: dailyLastCount[0].count + (dailyObj.hasOwnProperty(keyDate) ? dailyObj[keyDate] : 0),
+            new_members_count: dailyObj.hasOwnProperty(keyDate) ? dailyObj[keyDate] : 0
+        };
+        else result["daily"][keyDate] = {
+            total_count: result["daily"][`Day ${i-1}`]["total_count"] + (dailyObj.hasOwnProperty(keyDate) ? dailyObj[keyDate] : 0),
+            new_members_count: dailyObj.hasOwnProperty(keyDate) ? dailyObj[keyDate] : 0
+        };
+    };
+    result["daily"]["total"] = result["daily"][`Day ${currentDay}`]["total_count"];
+
+    var monthlyObj = monthly.reduce((obj, item) => (
+        obj[moment(item.datetime).format("MMMM")] = item.count, obj
+    ) ,{});
+    const months = moment.months();
+    let currentMonth = moment().format("M");
+    for (let i = 0; i < currentMonth; i++) {
+        if(i == 0) result["monthly"][months[i]] = {
+            total_count: monthlyLastCount[0].count + (monthlyObj.hasOwnProperty(months[i]) ? monthlyObj[months[i]] : 0),
+            new_members_count: monthlyObj.hasOwnProperty(months[i]) ? monthlyObj[months[i]] : 0
+        };
+        else result["monthly"][months[i]] = {
+            total_count: result["monthly"][months[i - 1]]["total_count"] + (monthlyObj.hasOwnProperty(months[i]) ? monthlyObj[months[i]] : 0),
+            new_members_count: monthlyObj.hasOwnProperty(months[i]) ? monthlyObj[months[i]] : 0
+        };
+    };
+    result["monthly"]["total"] = result["monthly"][months[currentMonth-1]]["total_count"];
+
+    for (let i = 0; i < yearly.length; i++) {
+        var keyDate = moment(yearly[i].datetime).format("YYYY");
+        if(i==0) result["yearly"][keyDate] = {
+            total_count: yearly[i]["count"],
+            new_members_count: yearly[i]["count"]
+        }
+        else result["yearly"][keyDate] = {
+            total_count: result["yearly"][keyDate - 1]["total_count"] + yearly[i]["count"],
+            new_members_count: yearly[i]["count"]
+        }
+        result["yearly"]["total"] = result["yearly"][keyDate]["total_count"];
+    }
+    
     return result;
 }

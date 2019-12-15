@@ -16,7 +16,9 @@ module.exports = {
   retrieveBranchNewMembers,
   retrieveGenderDemographics,
   retrieveCustomerAgeRange,
-  retrieveLivedCity
+  retrieveLivedCity,
+  retrieveMembersCount,
+  retrieveMembersLastCount
 }
 
 function* retrieveUserRole(userId) {
@@ -95,6 +97,22 @@ function* retrieveLivedCity(interval) {
   if (interval == "date") sql += "WHERE MONTH(created_at) = MONTH(CURRENT_DATE()) ";
   if (interval == "month") sql += "WHERE YEAR(created_at) = YEAR(CURRENT_DATE()) ";
   sql += "GROUP BY city;";
+  let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
+  return results;
+}
+
+function* retrieveMembersCount(interval, startDate) {
+  var sql = "SELECT COUNT(1) as count, DATE(created_at) as datetime " +
+    "FROM customers ";
+  if (interval == "date") sql += "WHERE MONTH(created_at) = MONTH(CURRENT_DATE()) ";
+  if (interval == "month") sql += `WHERE ${startDate} <= created_at  `;
+  sql += `GROUP BY ${interval}(created_at) ORDER BY datetime;`;
+  let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
+  return results;
+}
+
+function* retrieveMembersLastCount(startDate) {
+  var sql = `SELECT COUNT(1) as count FROM customers WHERE ${startDate} >= created_at;`;
   let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
   return results;
 }

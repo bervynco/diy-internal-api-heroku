@@ -8,7 +8,8 @@ module.exports = {
     getBranchNewMembersCombination,
     getGenderDemographicsCombination,
     getCustomerAgeRangeCombination,
-    getLivedCityCombination
+    getLivedCityCombination,
+    getMembersCombination
 };
 
 /**
@@ -68,5 +69,17 @@ function getCustomerAgeRangeCombination(req, res, next) {
 function getLivedCityCombination(req, res, next) {
     co(function* () {
         res.json(yield ChartService.getLivedCityCombination(req.auth, req.swagger.params));
+    }).catch(next);
+}
+
+/**
+ * Gets the total number of members and total number of new members. non-anonymous
+ *
+ * @param req the request
+ * @param res the response
+ */
+function getMembersCombination(req, res, next) {
+    co(function* () {
+        res.json(yield ChartService.getMembersCombination(req.auth, req.swagger.params));
     }).catch(next);
 }
