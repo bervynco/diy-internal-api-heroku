@@ -18,12 +18,13 @@ const Op = Sequelize.Op;
 const User = models.User;
 const UserRole = models.UserRole;
 const Activity = models.Activity;
-// const Password = models.Password;
+const POSUser = models.POSUser;
 
 module.exports = {
     login,
     register,
     refreshToken,
+    posLogin
     // forgotPassword
 };
 
@@ -49,8 +50,8 @@ function* login(auth, params, entity) {
         throw new errors.Forbidden(
             "Username deactivated by one administrator. Please contact them to fix this."
         );
-    // const match = yield utils.compare(password, user.password.toString("utf8"));
-    // if (!match) throw new errors.Auth("Invalid username or password");
+    const match = yield utils.compare(password, user.password.toString("utf8"));
+    if (!match) throw new errors.Auth("Invalid username or password");
 
     let role = yield db.retrieveUserRole(user.id);
     role = role || { role: "su" };
@@ -60,6 +61,52 @@ function* login(auth, params, entity) {
         role: role.role
     };
     console.log(payload)
+
+    var accessToken = jwt.create(payload, config.jwt.SECRET, {
+        expiresIn: config.jwt.EXPIRATION_TIME
+    });
+    var refreshToken = jwt.create(payload, config.jwt.SECRET, {
+        expiresIn: config.jwt.EXPIRATION_TIME * 100
+    });
+
+    yield Activity.create({
+        userId: user.id,
+        type: "login",
+        createdBy: "system",
+        updatedBy: "system"
+    });
+
+    return {
+        accessToken: accessToken,
+        refreshToken: refreshToken
+    };
+}
+
+/**
+ * POST /pos/login
+ * pos login, anonymous
+ *
+ * @param auth the authorized user
+ * @param params the parameters for the method
+ */
+function* posLogin(auth, params, entity) {
+    params = _.mapValues(params, function (v) {
+        return v.value;
+    });
+    const username = entity.username;
+    const password = entity.password;
+
+    const user = yield POSUser.findOne({
+        where: { username: username }
+    });
+    if (!user) throw new errors.Auth("Invalid username or password");
+    const match = yield utils.compare(password, user.password.toString("utf8"));
+    if (!match) throw new errors.Auth("Invalid username or password");
+
+    const payload = {
+        userId: user.id,
+        role: "pos"
+    };
 
     var accessToken = jwt.create(payload, config.jwt.SECRET, {
         expiresIn: config.jwt.EXPIRATION_TIME

@@ -7,6 +7,7 @@ module.exports = {
     login,
     register,
     refreshToken,
+    posLogin
     // forgotPassword
 };
 /**
@@ -22,6 +23,21 @@ function login(req, res, next) {
         res.json(yield UserService.login(req.auth, req.swagger.params, req.body));
     }).catch(next);
 }
+
+/**
+ * POST /pos/login
+ * pos login, anonymous
+ *
+ * @param req the request
+ * @param res the response
+ * @param next the next step in the middleware flow
+ */
+function posLogin(req, res, next) {
+    co(function* () {
+        res.json(yield UserService.posLogin(req.auth, req.swagger.params, req.body));
+    }).catch(next);
+}
+
 /**
  * POST /users/register
  * create a user in the application and send confirmation email to the email address specified. The implementations should verify that email is unique and the client payload is valid, anonymous

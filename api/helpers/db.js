@@ -18,7 +18,8 @@ module.exports = {
   retrieveCustomerAgeRange,
   retrieveLivedCity,
   retrieveMembersCount,
-  retrieveMembersLastCount
+  retrieveMembersLastCount,
+  rerieveCustomerPointSummary
 }
 
 function* retrieveUserRole(userId) {
@@ -115,4 +116,14 @@ function* retrieveMembersLastCount(startDate) {
   var sql = `SELECT COUNT(1) as count FROM customers WHERE ${startDate} >= created_at;`;
   let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
   return results;
+}
+
+function* rerieveCustomerPointSummary(customerKey) {
+  var sql = `SELECT COALESCE(SUM(case when transaction_type = 'credit' and status = 'approved' then points else 0 end),0) as total_earnings,
+  COALESCE(SUM(case when transaction_type = 'debit' and status = 'approved' then points else 0 end),0) as total_redeems
+  FROM customer_transactions
+  WHERE customer_key='${customerKey}';`
+
+  let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
+  return humps.camelizeKeys(results[0]) || { total_earnings: 0, total_redeems: 0};
 }

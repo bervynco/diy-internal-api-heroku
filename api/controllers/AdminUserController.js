@@ -7,11 +7,14 @@ module.exports = {
     getAllUsers,
     getAllCustomers,
     getCustomerTransactions,
-    // getUserDetail,
+    getCustomerProfile,
     deleteUser,
+    addTransactionRecord,
     // updateUserDetail,
     // getUserActivities,
     addUser,
+    addPOSUser,
+    redeemPoints
     // bulkDeleteAdminUsers
 };
 
@@ -64,13 +67,66 @@ function addUser(req, res, next) {
 }
 
 /**
+* POST /users/pos
+* Add a POS user
+*
+* @param req the request
+* @param res the response
+*/
+function addPOSUser(req, res, next) {
+    co(function* () {
+        res.json(yield AdminUserService.addPOSUser(req.auth, req.body));
+    }).catch(next);
+}
+
+/**
+* POST /customer/redeem
+* Redeems the points of the customer. non-anonymous
+*
+* @param req the request
+* @param res the response
+*/
+function redeemPoints(req, res, next) {
+    co(function* () {
+        res.json(yield AdminUserService.redeemPoints(req.auth, req.swagger.params, req.body));
+    }).catch(next);
+}
+
+/**
  * Delete an admin user identified by unique id
  *
  * @param req the request
  * @param res the response
  */
 function deleteUser(req, res, next) {
-    co(function* (){
-      res.json(yield AdminUserService.deleteUser(req.auth, req.swagger.params.id.value));
+    co(function* () {
+        res.json(yield AdminUserService.deleteUser(req.auth, req.swagger.params.id.value));
     }).catch(next);
-  }
+}
+
+/**
+ * Gets the profile of the customer. non-anonymous
+ *
+ * @param req the request
+ * @param res the response
+ */
+function getCustomerProfile(req, res, next) {
+    co(function* () {
+        console.log(req.body)
+        res.json(yield AdminUserService.getCustomerProfile(req.auth, req.body));
+    }).catch(next);
+}
+
+/**
+ * POST /customers/earn
+ * Logs the transaction history of the user. non-anonymous
+ *
+ * @param req the request
+ * @param res the response
+ * @param next the next step in the middleware flow
+ */
+function addTransactionRecord(req, res, next) {
+    co(function* () {
+        res.json(yield AdminUserService.addTransactionRecord(req.auth, req.swagger.params, req.body));
+    }).catch(next);
+}

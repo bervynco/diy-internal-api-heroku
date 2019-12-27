@@ -1,69 +1,39 @@
 'use strict';
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('customers', {
+	return sequelize.define('pos_users', {
 		id: {
 			type: DataTypes.BIGINT,
 			allowNull: false,
 			primaryKey: true,
 			autoIncrement: true,
-			field: 'customer_id'
+			field: 'pu_id'
 		},
-		customerKey: {
+		branchId: {
 			type: DataTypes.BIGINT,
-			allowNull: true,
-			field: 'customer_key'
+			allowNull: false,
+			field: 'branch_id'
 		},
-		firstName: {
-			type: DataTypes.STRING,
-			allowNull: true,
-			field: 'first_name'
-		},
-		lastName: {
-			type: DataTypes.STRING,
-			allowNull: true,
-			field: 'last_name'
-		},
-		email: {
+		username: {
 			type: DataTypes.STRING,
 			allowNull: false,
-			field: 'email'
-		},
-		gender: {
-			type: DataTypes.ENUM('male','female'),
-			allowNull: true,
-			field: 'gender'
-		},
-		city: {
-			type: DataTypes.STRING,
-			allowNull: true,
-			field: 'city'
-		},
-		birthday: {
-			type: DataTypes.DATEONLY,
-			allowNull: true,
-			field: 'birthday'
-		},
-		contactNumber: {
-			type: DataTypes.STRING,
-			allowNull: true,
-			field: 'contact_number'
-		},
-		isActive: {
-			type: DataTypes.BOOLEAN,
-			allowNull: true,
-			field: 'is_active'
+			field: 'username'
 		},
 		password: {
 			type: DataTypes.STRING,
 			allowNull: false,
 			field: 'password'
 		},
-		resetPasswordToken: {
+		createdBy: {
 			type: DataTypes.STRING,
-			allowNull: true,
-			field: 'resetPasswordToken'
+			allowNull: false,
+			field: 'created_by'
 		},
+		updatedBy: {
+			type: DataTypes.STRING,
+			allowNull: false,
+			field: 'updated_by'
+        },
 		createdAt: {
 			type: 'TIMESTAMP',
 			allowNull: false,
@@ -75,7 +45,7 @@ module.exports = function(sequelize, DataTypes) {
 			field: 'updated_at'
 		}
 	}, {
-		tableName: 'customers',
+		tableName: 'pos_users',
 		freezeTableName: true,
 		timestamps: false,
 		omitNull: false,
@@ -88,7 +58,6 @@ module.exports = function(sequelize, DataTypes) {
 				if (!instance.updatedAt) instance.updatedAt = milliseconds;
 			},
 			beforeUpdate: function(instance, options) {
-				console.log("UDPATE", instance.updatedAt)
 				const milliseconds = require('moment')().format('YYYY-MM-DD HH:mm:ss').toString();
 				if (!instance.updatedAt) instance.updatedAt = milliseconds;
 			},

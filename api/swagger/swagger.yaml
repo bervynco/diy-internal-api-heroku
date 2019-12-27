@@ -80,6 +80,39 @@ paths:
           description: "user not found with specified email"
           schema:
             $ref: "#/definitions/ErrorDetail"
+  /pos/login:
+    x-swagger-router-controller: UserController
+    post:
+      description: "POS login, anonymous"
+      operationId: posLogin
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: "username and password"
+          required: true
+          schema:
+            $ref: "#/definitions/LoginPOSReq"
+      responses:
+        "200":
+          description: "access token and refresh token"
+          schema:
+            $ref: "#/definitions/LoginRes"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "invalid username or password"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "404":
+          description: "user not found with specified email"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
   /users/refreshtoken:
     x-swagger-router-controller: UserController
     post:
@@ -177,6 +210,43 @@ paths:
           description: "access token is not valid"
           schema:
             $ref: "#/definitions/ErrorDetail"
+  /users/pos:
+    x-swagger-router-controller: AdminUserController
+    post:
+      description: "Add a new POS user. non-anonymous, super-admin and admin only"
+      operationId: addPOSUser
+      security:
+        - jwt: []
+      x-access-control:
+        role: 
+          - "admin" 
+          - "super-admin"
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: body
+          name: body
+          description: "the details of the new user"
+          required: true
+          schema:
+            $ref: "#/definitions/RegisterPOSReq"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: object
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
   /users/customers:
     x-swagger-router-controller: AdminUserController
     get:
@@ -200,6 +270,122 @@ paths:
             type: array
             items:
               $ref: "#/definitions/Customers"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /customer/get:
+    x-swagger-router-controller: AdminUserController
+    post:
+      description: "Gets the profile of the customer. non-anonymous"
+      operationId: getCustomerProfile
+      security:
+        - jwt: []
+      x-access-control:
+        role: 
+          - "pos"
+      produces:
+        - application/json
+      consumes:
+        - text/plain
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: body
+          name: body
+          description: "the id of the customer"
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Customers"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /customers/earn:
+    x-swagger-router-controller: AdminUserController
+    post:
+      description: "Logs the transaction history of the user. non-anonymous"
+      operationId: addTransactionRecord
+      security:
+        - jwt: []
+      x-access-control:
+        role: 
+          - "pos"
+      produces:
+        - application/json
+      consumes:
+        - text/plain
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: body
+          name: body
+          description: "the details of the transactions"
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "successful operation"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /customers/redeem:
+    x-swagger-router-controller: AdminUserController
+    post:
+      description: "Redeems the points of the customer. non-anonymous"
+      operationId: redeemPoints
+      security:
+        - jwt: []
+      x-access-control:
+        role: 
+          - "pos"
+      produces:
+        - application/json
+      consumes:
+        - text/plain
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: body
+          name: body
+          description: "the details of the transactions"
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "successful operation"
         "400":
           description: "the validation failed, client request is invalid"
           schema:
@@ -546,6 +732,16 @@ definitions:
       refreshToken:
         type: string
         description: "the refresh token that can be used to obtain a new access token in case of remember me"
+  LoginPOSReq:
+    type: object
+    properties:
+      username:
+        type: string
+      password:
+        type: string
+    required:
+      - username
+      - password
   HelloWorldResponse:
     required:
       - message
@@ -584,6 +780,19 @@ definitions:
         type: string
       password:
         type: string
+  RegisterPOSReq:
+    type: object
+    required:
+      - username
+      - password
+      - branchId
+    properties:
+      username:
+        type: string
+      password:
+        type: string
+      branchId:
+        type: number
   MinAppUser:
     type: object
     required:
@@ -738,3 +947,24 @@ definitions:
       yearly:
         type: object
         description: "the average transaction per gender in a yearly basis"
+  NewTransactionReq:
+    type: object
+    properties:
+      customerKey:
+        type: string
+      branchId:
+        type: number
+      referenceNumber:
+        type: 
+          - string
+          - 'null'
+      transactionAmount:
+        type: number
+        format: double
+        description: "the amount of transaction"
+        maximum: 999999999
+        minimum: 0
+    required:
+      - customerKey
+      - branchId
+      - transactionAmount

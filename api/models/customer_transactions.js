@@ -9,21 +9,32 @@ module.exports = function(sequelize, DataTypes) {
 			autoIncrement: true,
 			field: 'ct_id'
 		},
-		customerId: {
+		customerKey: {
 			type: DataTypes.BIGINT,
 			allowNull: false,
-			field: 'customer_id'
+			field: 'customer_key'
+		},
+		branchId: {
+			type: DataTypes.BIGINT,
+			allowNull: false,
+			field: 'branch_id'
 		},
 		wallet: {
 			type: DataTypes.STRING,
 			allowNull: true,
 			field: 'wallet'
         },
-        amount: {
+        transactionAmount: {
 			type: 'NUMERIC',
 			allowNull: false,
 			defaultValue: 0,
-			field: 'amount'
+			field: 'transaction_amount'
+		},
+		points: {
+			type: 'NUMERIC',
+			allowNull: false,
+			defaultValue: 0,
+			field: 'points'
 		},
 		transactionType: {
 			type: DataTypes.ENUM('credit','debit'),
@@ -34,6 +45,11 @@ module.exports = function(sequelize, DataTypes) {
 			type: DataTypes.STRING,
 			allowNull: true,
 			field: 'description'
+		},
+		referenceNumber: {
+			type: DataTypes.STRING,
+			allowNull: true,
+			field: 'reference_number'
 		},
 		status: {
 			type: DataTypes.ENUM('approved','declined','pending'),

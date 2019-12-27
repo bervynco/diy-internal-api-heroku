@@ -14,6 +14,7 @@ const sequelize = models.sequelize;
 const Sequelize = models.Sequelize;
 
 const User = models.User;
+const POSUser = models.POSUser;
 const UserRole = models.UserRole;
 const Customer = models.Customer;
 const CustomerTransaction = models.CustomerTransaction;
@@ -21,9 +22,13 @@ const CustomerTransaction = models.CustomerTransaction;
 module.exports = {
     getAllUsers,
     getAllCustomers,
+    getCustomerProfile,
     getCustomerTransactions,
     addUser,
-    deleteUser
+    deleteUser,
+    addTransactionRecord,
+    addPOSUser,
+    redeemPoints
 };
 
 /**
@@ -58,6 +63,114 @@ function* getAllCustomers(auth, params, entity) {
     };
     console.log(customers)
     return customers;
+}
+
+/**
+ * Gets the profile of the customer. non-anonymous
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Object}    [params]      the parameters for the method
+ */
+function* getCustomerProfile(auth, entity) {
+    entity = JSON.parse(entity);
+    let userKey = entity.id;
+    // userId = Buffer.from(userId, 'base64').toString('ascii');
+    // userId = Buffer.from(userId, 'base64').toString('ascii');
+    // var n = userId.indexOf(' ');
+    // userId = userId.substring(n != -1 ? n+1 : userId.length, userId.length);
+    var customer = yield Customer.findOne({ where: { customerKey: userKey } });
+    if (!customer) {
+        throw new errors.NotFound('Customer not found with specified id');
+    }
+    customer["birthday"] = customer["birthday"] != null ? moment.utc(customer["birthday"]).format('YYYY-MM-DD') : null;
+    customer = _.omit(customer.toJSON(), 'password', 'resetPasswordToken');
+    let pointSummary = yield db.rerieveCustomerPointSummary(userKey);
+    customer.availablePoints = pointSummary.totalEarnings - pointSummary.totalRedeems;
+    //let test = Buffer.from(`id: ${userId}`).toString('base64');
+    //test = Buffer.from(test).toString('base64');
+    // console.log(test);
+    // console.log(Buffer.from(test, 'base64').toString('ascii'))
+    return customer;
+}
+
+/**
+ * Logs the transaction history of the user. non-anonymous
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Object}    [params]      the parameters for the method
+ */
+function* addTransactionRecord(auth, params, entity) {
+    params = _.mapValues(params, function (v) {
+        return v.value;
+    });
+    return sequelize
+        .transaction(
+            {
+                isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+            },
+            co.wrap(function* (t) {
+                entity = JSON.parse(entity);
+                entity.customerKey = entity.id;
+                delete entity['id'];
+                let userId = auth.userId;
+                const pos = yield POSUser.findByPk(userId);
+                var customer = yield Customer.findOne({ where: { customerKey: entity.customerKey } });
+                if (!customer) {
+                    throw new errors.NotFound('Customer not found with specified id');
+                }
+                let expirationDate = moment(entity.transactionDate).add(2, 'd');
+                if (moment().isAfter(expirationDate))
+                    throw new errors.BadRequest('Transaction expired.');
+                entity.branchId = pos.branchId;
+                entity.points = Math.floor(entity.transactionAmount / 200);
+                entity.transactionType = "credit";
+                entity.status = "approved";
+                entity.createdAt = entity.transactionDate;
+                yield CustomerTransaction.create(entity, { transaction: t });
+            })
+        )
+        .catch(function (err) {
+            throw err;
+        });
+}
+
+/**
+ * Redeems the points of the customer. non-anonymous
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Object}    [params]      the parameters for the method
+ */
+function* redeemPoints(auth, params, entity) {
+    params = _.mapValues(params, function (v) {
+        return v.value;
+    });
+    return sequelize
+        .transaction(
+            {
+                isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+            },
+            co.wrap(function* (t) {
+                entity = JSON.parse(entity);
+                let record = {};
+                record.customerKey = entity.id;
+                let userId = auth.userId;
+                const pos = yield POSUser.findByPk(userId);
+                var customer = yield Customer.findOne({ where: { customerKey: record.customerKey } });
+                if (!customer) {
+                    throw new errors.NotFound('Customer not found with specified id');
+                }
+                record.branchId = pos.branchId;
+                let pointSummary = yield db.rerieveCustomerPointSummary(record.customerKey);
+                console.log(pointSummary)
+                record.points = pointSummary.totalEarnings - pointSummary.totalRedeems;
+                record.transactionType = "debit";
+                record.status = "approved";
+                yield CustomerTransaction.create(record, { transaction: t });
+            })
+        )
+        .catch(function (err) {
+            throw err;
+        });
 }
 
 /**
@@ -108,6 +221,33 @@ function* addUser(auth, entity) {
 }
 
 /**
+ * Add a POS user. non-anonymous
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Object}    entity        the request payload from client
+ */
+function* addPOSUser(auth, entity) {
+    return sequelize.transaction({
+        isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+    }, co.wrap(function* (t) {
+        const username = entity.username;
+        const existing = yield POSUser.count({
+            where: { username: username }
+        });
+        if (existing != 0)
+            throw new errors.BadRequest('User with username already exists.');
+
+        entity.password = yield utils.hashString(entity.password, 4);
+        entity.createdBy = auth.userId;
+        entity.updatedBy = auth.userId;
+        const created = yield POSUser.create(entity, { transaction: t });
+        return created;
+    })).catch(function (err) {
+        throw err;
+    });
+}
+
+/**
  * Delete an admin user.
  *
  * @param   {Object}    auth          the currently authenticated user
@@ -134,6 +274,6 @@ function* getCustomerTransactions(auth, id, entity) {
         where: { customerId: id },
         order: [['createdAt', 'ASC']]
     });
-    
+
     return transactions;
 }
