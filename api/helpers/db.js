@@ -42,10 +42,10 @@ function* retrieveUsers() {
 }
 
 function* retrievePriceRangeGender(interval) {
-  var sql = "SELECT SUM(CASE WHEN c.gender = 'female' then ct.amount else 0 end) as female, SUM(CASE WHEN c.gender = 'male' then ct.amount else 0 end) as male, DATE(ct.created_at) as datetime " +
+  var sql = "SELECT SUM(CASE WHEN c.gender = 'female' then ct.transaction_amount else 0 end) as female, SUM(CASE WHEN c.gender = 'male' then ct.transaction_amount else 0 end) as male, DATE(ct.created_at) as datetime " +
     "FROM customer_transactions  as ct " +
     "INNER JOIN customers as c " +
-    "ON c.customer_id = ct.customer_id " +
+    "ON c.customer_key = ct.customer_key " +
     "WHERE ct.transaction_type ='credit' ";
   if (interval == "date") sql += "AND MONTH(ct.created_at) = MONTH(CURRENT_DATE()) ";
   if (interval == "date" || interval == "month") sql += "AND YEAR(ct.created_at) = YEAR(CURRENT_DATE()) "

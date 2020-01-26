@@ -23,10 +23,12 @@ module.exports = {
     getAllUsers,
     getAllCustomers,
     getCustomerProfile,
+    getCustomerBalance,
     getCustomerTransactions,
     addUser,
     deleteUser,
     addTransactionRecord,
+    returnTransaction,
     addPOSUser,
     redeemPoints
 };
@@ -73,7 +75,7 @@ function* getAllCustomers(auth, params, entity) {
  */
 function* getCustomerProfile(auth, entity) {
     entity = JSON.parse(entity);
-    let userKey = entity.id;
+    let userKey = entity.customerKey;
     // userId = Buffer.from(userId, 'base64').toString('ascii');
     // userId = Buffer.from(userId, 'base64').toString('ascii');
     // var n = userId.indexOf(' ');
@@ -94,6 +96,25 @@ function* getCustomerProfile(auth, entity) {
 }
 
 /**
+ * Gets the available points of a customer. non-anonymous
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Object}    [params]      the parameters for the method
+ */
+function* getCustomerBalance(auth, entity) {
+    entity = JSON.parse(entity);
+    let userKey = entity.customerKey;
+    var customer = yield Customer.findOne({ where: { customerKey: userKey } });
+    if (!customer) {
+        throw new errors.NotFound('Customer not found with specified id');
+    }
+    let pointSummary = yield db.rerieveCustomerPointSummary(userKey);
+    let availablePoints = 0;
+    availablePoints = pointSummary.totalEarnings - pointSummary.totalRedeems;
+    return availablePoints;
+}
+
+/**
  * Logs the transaction history of the user. non-anonymous
  *
  * @param   {Object}    auth          the currently authenticated user
@@ -110,8 +131,7 @@ function* addTransactionRecord(auth, params, entity) {
             },
             co.wrap(function* (t) {
                 entity = JSON.parse(entity);
-                entity.customerKey = entity.id;
-                delete entity['id'];
+                entity.customerKey = entity.customerKey;
                 let userId = auth.userId;
                 const pos = yield POSUser.findByPk(userId);
                 var customer = yield Customer.findOne({ where: { customerKey: entity.customerKey } });
@@ -127,6 +147,46 @@ function* addTransactionRecord(auth, params, entity) {
                 entity.status = "approved";
                 entity.createdAt = entity.transactionDate;
                 yield CustomerTransaction.create(entity, { transaction: t });
+            })
+        )
+        .catch(function (err) {
+            throw err;
+        });
+}
+
+/**
+ * Updates the transaction amount of the customer. non-anonymous
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Object}    [params]      the parameters for the method
+ */
+function* returnTransaction(auth, params, entity) {
+    params = _.mapValues(params, function (v) {
+        return v.value;
+    });
+    return sequelize
+        .transaction(
+            {
+                isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+            },
+            co.wrap(function* (t) {
+                entity = JSON.parse(entity);
+                entity.customerKey = entity.customerKey;
+                let userId = auth.userId;
+                const pos = yield POSUser.findByPk(userId);
+                var transaction = yield CustomerTransaction.findOne({ where: { customerKey: entity.customerKey, 
+                    referenceNumber: entity.referenceNumber } });
+                if(transaction.transactionAmount > entity.transactionAmount) {
+                    throw new errors.NotFound('New transaction amount should be higher from the previous transaction.');
+                };
+                if (!transaction) {
+                    throw new errors.NotFound('Transaction not found with specified id');
+                };
+                transaction.points = Math.floor(entity.transactionAmount / 200);
+                transaction.transactionType = "credit";
+                transaction.status = "approved";
+                transaction.createdAt = entity.transactionDate;
+                yield transaction.save({ transaction: t });
             })
         )
         .catch(function (err) {
@@ -152,7 +212,7 @@ function* redeemPoints(auth, params, entity) {
             co.wrap(function* (t) {
                 entity = JSON.parse(entity);
                 let record = {};
-                record.customerKey = entity.id;
+                record.customerKey = entity.customerKey;
                 let userId = auth.userId;
                 const pos = yield POSUser.findByPk(userId);
                 var customer = yield Customer.findOne({ where: { customerKey: record.customerKey } });
@@ -164,6 +224,7 @@ function* redeemPoints(auth, params, entity) {
                 console.log(pointSummary)
                 record.points = pointSummary.totalEarnings - pointSummary.totalRedeems;
                 record.transactionType = "debit";
+                record.transactionAmount = record.points;
                 record.status = "approved";
                 yield CustomerTransaction.create(record, { transaction: t });
             })

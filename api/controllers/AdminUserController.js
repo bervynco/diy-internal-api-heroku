@@ -8,14 +8,15 @@ module.exports = {
     getAllCustomers,
     getCustomerTransactions,
     getCustomerProfile,
+    getCustomerBalance,
     deleteUser,
     addTransactionRecord,
+    returnTransaction,
     // updateUserDetail,
     // getUserActivities,
     addUser,
     addPOSUser,
     redeemPoints
-    // bulkDeleteAdminUsers
 };
 
 /**
@@ -80,7 +81,7 @@ function addPOSUser(req, res, next) {
 }
 
 /**
-* POST /customer/redeem
+* POST /customers/redeem
 * Redeems the points of the customer. non-anonymous
 *
 * @param req the request
@@ -118,6 +119,19 @@ function getCustomerProfile(req, res, next) {
 }
 
 /**
+ * POST /customers/balance
+ * Gets the available points of a customer. non-anonymous
+ *
+ * @param req the request
+ * @param res the response
+ */
+function getCustomerBalance(req, res, next) {
+    co(function* () {
+        res.json(yield AdminUserService.getCustomerBalance(req.auth, req.body));
+    }).catch(next);
+}
+
+/**
  * POST /customers/earn
  * Logs the transaction history of the user. non-anonymous
  *
@@ -128,5 +142,19 @@ function getCustomerProfile(req, res, next) {
 function addTransactionRecord(req, res, next) {
     co(function* () {
         res.json(yield AdminUserService.addTransactionRecord(req.auth, req.swagger.params, req.body));
+    }).catch(next);
+}
+
+/**
+ * POST /customers/return
+ * Updates the transaction amount of the customer. non-anonymous
+ *
+ * @param req the request
+ * @param res the response
+ * @param next the next step in the middleware flow
+ */
+function returnTransaction(req, res, next) {
+    co(function* () {
+        res.json(yield AdminUserService.returnTransaction(req.auth, req.swagger.params, req.body));
     }).catch(next);
 }

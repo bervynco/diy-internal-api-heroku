@@ -69,7 +69,7 @@ function* getPriceRangeGenderCombination(auth, params, entity) {
 }
 
 /**
- * Gets the count of new members per city. non-anonymous
+ * Gets the count of new members per branch. non-anonymous
  *
  * @param   {Object}    auth          the currently authenticated user
  * @param   {Object}    [params]      the parameters for the method
@@ -119,22 +119,22 @@ function* getGenderDemographicsCombination(auth, params, entity) {
     daily.forEach((day) => {
         var keyDate = "Day " + moment(day.datetime).format("D");
         result["daily"][keyDate] = {
-            female: day["female"],
-            male: day["male"]
+            female: Number(day["female"]),
+            male: Number(day["male"])
         }
     })
     monthly.forEach((day) => {
         var keyDate = moment(day.datetime).format("MMMM");
         result["monthly"][keyDate] = {
-            female: day["female"],
-            male: day["male"]
+            female: Number(day["female"]),
+            male: Number(day["male"])
         }
     })
     yearly.forEach((day) => {
         var keyDate = moment(day.datetime).format("YYYY");
         result["yearly"][keyDate] = {
-            female: day["female"],
-            male: day["male"]
+            female: Number(day["female"]),
+            male: Number(day["male"])
         }
     })
     return result;
@@ -201,24 +201,20 @@ function* getLivedCityCombination(auth, params, entity) {
     let daily = yield db.retrieveLivedCity("date");
     let monthly = yield db.retrieveLivedCity("month");
     let yearly = yield db.retrieveLivedCity("year");
-    let result = yield utils.chartSkeleton(_.map(yearly, 'city'));
+    let result = {
+        "daily": {},
+        "monthly": {},
+        "yearly": {}
+    };
     let total = _.sumBy(daily, function (o) { return o.count; });
-    daily.forEach((day) => {
-        var keyDate = "Day " + moment(day.datetime).format("D");
-        if (!result["daily"].hasOwnProperty(keyDate)) result["daily"][keyDate] = {};
-        result["daily"][keyDate][day["city"]] = day["count"] / total;
+    daily.forEach((entry) => {
+        result["daily"][entry.city] = entry.count;
     });
-    total = _.sumBy(monthly, function (o) { return o.count; });
-    monthly.forEach((day) => {
-        var keyDate = moment(day.datetime).format("MMMM");
-        if (!result["monthly"].hasOwnProperty(keyDate)) result["monthly"][keyDate] = {};
-        result["monthly"][keyDate][day["city"]] = day["count"] / total;
+    monthly.forEach((entry) => {
+        result["monthly"][entry.city] = entry.count;
     });
-    total = _.sumBy(yearly, function (o) { return o.count; });
-    yearly.forEach((day) => {
-        var keyDate = moment(day.datetime).format("YYYY");
-        if (!result["yearly"].hasOwnProperty(keyDate)) result["yearly"][keyDate] = {};
-        result["yearly"][keyDate][day["city"]] = day["count"] / total;
+    yearly.forEach((entry) => {
+        result["yearly"][entry.city] = entry.count;
     });
 
     return result;

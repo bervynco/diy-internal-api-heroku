@@ -278,7 +278,7 @@ paths:
           description: "access token is not valid"
           schema:
             $ref: "#/definitions/ErrorDetail"
-  /customer/get:
+  /customers/profile:
     x-swagger-router-controller: AdminUserController
     post:
       description: "Gets the profile of the customer. non-anonymous"
@@ -318,11 +318,91 @@ paths:
           description: "access token is not valid"
           schema:
             $ref: "#/definitions/ErrorDetail"
+  /customers/balance:
+    x-swagger-router-controller: AdminUserController
+    post:
+      description: "Gets the available points of a customer. non-anonymous"
+      operationId: getCustomerBalance
+      security:
+        - jwt: []
+      x-access-control:
+        role: 
+          - "pos"
+      produces:
+        - application/json
+      consumes:
+        - text/plain
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: body
+          name: body
+          description: "the id of the customer"
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: 
+              - string
+              - number
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
   /customers/earn:
     x-swagger-router-controller: AdminUserController
     post:
       description: "Logs the transaction history of the user. non-anonymous"
       operationId: addTransactionRecord
+      security:
+        - jwt: []
+      x-access-control:
+        role: 
+          - "pos"
+      produces:
+        - application/json
+      consumes:
+        - text/plain
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: body
+          name: body
+          description: "the details of the transactions"
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: "successful operation"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /customers/return:
+    x-swagger-router-controller: AdminUserController
+    post:
+      description: "Updates the transaction amount of the customer. non-anonymous"
+      operationId: returnTransaction
       security:
         - jwt: []
       x-access-control:
@@ -501,7 +581,7 @@ paths:
   /users/email:
     x-swagger-router-controller: AdminUserController
     post:
-      description: "sends email to all customers"
+      description: "sends email to all customers. non-anonymous"
       operationId: sendEmailToCustomers
       produces:
         - application/json
@@ -563,7 +643,7 @@ paths:
   /chart/branchNewMembers:
     x-swagger-router-controller: ChartController
     get:
-      description: "Gets the count of new members per city. non-anonymous"
+      description: "Gets the count of new members per branch. non-anonymous"
       operationId: getBranchNewMembersCombination
       security:
         - jwt: []
