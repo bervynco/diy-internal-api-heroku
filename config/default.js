@@ -9,7 +9,7 @@ module.exports = {
     db: {
         url: {
             dev: 'mysql://root@127.0.0.1:3306/diy_platform',
-            uat: 'mysql://bc996f411655d9:c95df933@us-cdbr-iron-east-04.cleardb.net/heroku_bcfa06796c710e2'
+            uat: 'mysql://bb1a8cf4ff3627:603e2009@eu-cdbr-west-02.cleardb.net/heroku_22e036f0223b41a'
         },
         logging: console.log,
     },
