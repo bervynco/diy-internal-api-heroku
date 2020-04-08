@@ -3,7 +3,7 @@
 module.exports = {
     express: {
         protocol: "https",
-        host: "https://diy-internal.herokuapp.com/",
+        host: "diy-platform-backend.herokuapp.com",
         port: 3494
     },
     db: {

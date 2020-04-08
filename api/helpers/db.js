@@ -19,7 +19,8 @@ module.exports = {
   retrieveLivedCity,
   retrieveMembersCount,
   retrieveMembersLastCount,
-  rerieveCustomerPointSummary
+  rerieveCustomerPointSummary,
+  rerieveNewCustomers
 }
 
 function* retrieveUserRole(userId) {
@@ -126,4 +127,12 @@ function* rerieveCustomerPointSummary(customerKey) {
 
   let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
   return humps.camelizeKeys(results[0]) || { total_earnings: 0, total_redeems: 0};
+}
+
+function* rerieveNewCustomers() {
+  var sql = `SELECT customer_key as customerKey, first_name as firstName, last_name as lastName, email FROM customers
+  WHERE DATE(created_at) = DATE_SUB(CURRENT_DATE(),INTERVAL 1 DAY);`
+
+  let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
+  return results;
 }

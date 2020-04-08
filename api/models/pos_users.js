@@ -43,6 +43,11 @@ module.exports = function(sequelize, DataTypes) {
 			type: 'TIMESTAMP',
 			allowNull: false,
 			field: 'updated_at'
+		},
+		lastSyncedAt:{
+			type: 'TIMESTAMP',
+			allowNull: false,
+			field: 'last_synced_at'
 		}
 	}, {
 		tableName: 'pos_users',

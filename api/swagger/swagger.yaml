@@ -278,8 +278,8 @@ paths:
           description: "access token is not valid"
           schema:
             $ref: "#/definitions/ErrorDetail"
-  /customers/profile:
-    x-swagger-router-controller: AdminUserController
+  /pos/customers/profile:
+    x-swagger-router-controller: POSController
     post:
       description: "Gets the profile of the customer. non-anonymous"
       operationId: getCustomerProfile
@@ -291,7 +291,7 @@ paths:
       produces:
         - application/json
       consumes:
-        - text/plain
+        - application/json
       parameters:
         - in: header
           name: Authorization
@@ -304,7 +304,7 @@ paths:
           description: "the id of the customer"
           required: true
           schema:
-            type: string
+            type: object
       responses:
         "200":
           description: "successful operation"
@@ -318,8 +318,12 @@ paths:
           description: "access token is not valid"
           schema:
             $ref: "#/definitions/ErrorDetail"
-  /customers/balance:
-    x-swagger-router-controller: AdminUserController
+        "404":
+          description: "if the specified customer key is not found"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /pos/customers/balance:
+    x-swagger-router-controller: POSController
     post:
       description: "Gets the available points of a customer. non-anonymous"
       operationId: getCustomerBalance
@@ -331,7 +335,7 @@ paths:
       produces:
         - application/json
       consumes:
-        - text/plain
+        - application/json
       parameters:
         - in: header
           name: Authorization
@@ -344,14 +348,12 @@ paths:
           description: "the id of the customer"
           required: true
           schema:
-            type: string
+            type: object
       responses:
         "200":
           description: "successful operation"
           schema:
-            type: 
-              - string
-              - number
+            type: object
         "400":
           description: "the validation failed, client request is invalid"
           schema:
@@ -360,11 +362,11 @@ paths:
           description: "access token is not valid"
           schema:
             $ref: "#/definitions/ErrorDetail"
-  /customers/earn:
-    x-swagger-router-controller: AdminUserController
+  /pos/customers/earn:
+    x-swagger-router-controller: POSController
     post:
       description: "Logs the transaction history of the user. non-anonymous"
-      operationId: addTransactionRecord
+      operationId: earnPoints
       security:
         - jwt: []
       x-access-control:
@@ -373,7 +375,7 @@ paths:
       produces:
         - application/json
       consumes:
-        - text/plain
+        - application/json
       parameters:
         - in: header
           name: Authorization
@@ -386,7 +388,7 @@ paths:
           description: "the details of the transactions"
           required: true
           schema:
-            type: string
+            type: object
       responses:
         "200":
           description: "successful operation"
@@ -398,8 +400,12 @@ paths:
           description: "access token is not valid"
           schema:
             $ref: "#/definitions/ErrorDetail"
-  /customers/return:
-    x-swagger-router-controller: AdminUserController
+        "404":
+          description: "if the specified customer key is not found"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /pos/customers/return:
+    x-swagger-router-controller: POSController
     post:
       description: "Updates the transaction amount of the customer. non-anonymous"
       operationId: returnTransaction
@@ -411,7 +417,7 @@ paths:
       produces:
         - application/json
       consumes:
-        - text/plain
+        - application/json
       parameters:
         - in: header
           name: Authorization
@@ -424,7 +430,7 @@ paths:
           description: "the details of the transactions"
           required: true
           schema:
-            type: string
+            type: object
       responses:
         "200":
           description: "successful operation"
@@ -436,8 +442,12 @@ paths:
           description: "access token is not valid"
           schema:
             $ref: "#/definitions/ErrorDetail"
-  /customers/redeem:
-    x-swagger-router-controller: AdminUserController
+        "404":
+          description: "if the specified customer key is not found"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /pos/customers/redeem:
+    x-swagger-router-controller: POSController
     post:
       description: "Redeems the points of the customer. non-anonymous"
       operationId: redeemPoints
@@ -449,7 +459,7 @@ paths:
       produces:
         - application/json
       consumes:
-        - text/plain
+        - application/json
       parameters:
         - in: header
           name: Authorization
@@ -462,16 +472,62 @@ paths:
           description: "the details of the transactions"
           required: true
           schema:
-            type: string
+            type: object
       responses:
         "200":
           description: "successful operation"
+          schema:
+           type: object
         "400":
           description: "the validation failed, client request is invalid"
           schema:
             $ref: "#/definitions/ErrorDetail"
         "401":
           description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "404":
+          description: "if the specified customer key is not found"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /pos/customers/new:
+    x-swagger-router-controller: POSController
+    post:
+      description: "Gets the list of all customers registered yesterday. non-anonymous"
+      operationId: getNewCustomers
+      security:
+        - jwt: []
+      x-access-control:
+        role:
+          - "pos"
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Customers"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "404":
+          description: "if the specified customer key is not found"
           schema:
             $ref: "#/definitions/ErrorDetail"
   /users/customers/{id}/transactions:
@@ -917,12 +973,12 @@ definitions:
   Customers:
     type: object
     required:
-      - id
+      - customerKey
       - email
     properties:
-      id:
-        type: number
-        description: "the customer's unique id"
+      customerKey:
+        type: string
+        description: "the customer's unique customerKey"
       firstName:
         type: 
           - string
