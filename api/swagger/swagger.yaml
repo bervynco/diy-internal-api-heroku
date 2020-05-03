@@ -392,6 +392,8 @@ paths:
       responses:
         "200":
           description: "successful operation"
+          schema:
+           type: object
         "400":
           description: "the validation failed, client request is invalid"
           schema:
@@ -434,50 +436,6 @@ paths:
       responses:
         "200":
           description: "successful operation"
-        "400":
-          description: "the validation failed, client request is invalid"
-          schema:
-            $ref: "#/definitions/ErrorDetail"
-        "401":
-          description: "access token is not valid"
-          schema:
-            $ref: "#/definitions/ErrorDetail"
-        "404":
-          description: "if the specified customer key is not found"
-          schema:
-            $ref: "#/definitions/ErrorDetail"
-  /pos/customers/redeem:
-    x-swagger-router-controller: POSController
-    post:
-      description: "Redeems the points of the customer. non-anonymous"
-      operationId: redeemPoints
-      security:
-        - jwt: []
-      x-access-control:
-        role: 
-          - "pos"
-      produces:
-        - application/json
-      consumes:
-        - application/json
-      parameters:
-        - in: header
-          name: Authorization
-          description: "Bearer access token in format Bearer {{accessToken}}"
-          required: true
-          type: string
-          format: string
-        - in: body
-          name: body
-          description: "the details of the transactions"
-          required: true
-          schema:
-            type: object
-      responses:
-        "200":
-          description: "successful operation"
-          schema:
-           type: object
         "400":
           description: "the validation failed, client request is invalid"
           schema:
@@ -550,8 +508,7 @@ paths:
           name: id
           description: "the admin user id"
           required: true
-          type: number
-          format: long
+          type: string
       responses:
         "200":
           description: "successful operation"
@@ -568,11 +525,45 @@ paths:
           schema:
             $ref: "#/definitions/ErrorDetail"
   
-  /users/customers/profile:
+  /users/customers/{id}/profile:
     x-swagger-router-controller: AdminUserController
     get:
       description: "Gets the details of the customer. non-anonymous"
-      operationId: findCustomerById
+      operationId: getCustomerById
+      security:
+        - jwt: []
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: path
+          name: id
+          description: "the customer user id"
+          required: true
+          type: string
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Customers"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /users/customers/transactions:
+    x-swagger-router-controller: AdminUserController
+    get:
+      description: "Returns all the transactions done for the day. non-anonymous"
+      operationId: getAllTodayTransactions
       security:
         - jwt: []
       produces:
@@ -588,7 +579,75 @@ paths:
         "200":
           description: "successful operation"
           schema:
-            $ref: "#/definitions/Customers"
+            type: array
+            items:
+              $ref: "#/definitions/Transactions"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /users/customers/role:
+    x-swagger-router-controller: AdminUserController
+    post:
+      description: "Update a customer's role, non-anonymous"
+      operationId: updateCustomerRole
+      security:
+        - jwt: []
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: body
+          name: body
+          description: "customer key and new role"
+          required: true
+          schema:
+            $ref: "#/definitions/CustomerRole"
+      responses:
+        "200":
+          description: "successful operation"
+        "400":
+          description: "the validation failed, client request is invalid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+        "401":
+          description: "access token is not valid"
+          schema:
+            $ref: "#/definitions/ErrorDetail"
+  /users/role:
+    x-swagger-router-controller: AdminUserController
+    post:
+      description: "Update a user's role, non-anonymous"
+      operationId: updateUserRole
+      security:
+        - jwt: []
+      produces:
+        - application/json
+      parameters:
+        - in: header
+          name: Authorization
+          description: "Bearer access token in format Bearer {{accessToken}}"
+          required: true
+          type: string
+          format: string
+        - in: body
+          name: body
+          description: "user id and new role"
+          required: true
+          schema:
+            $ref: "#/definitions/UserRole"
+      responses:
+        "200":
+          description: "successful operation"
         "400":
           description: "the validation failed, client request is invalid"
           schema:
@@ -1031,8 +1090,8 @@ definitions:
       id:
         type: number
         description: "the transaction's unique id"
-      customerId:
-        type: number
+      customerKey:
+        type: string
         description: "the customer's unique id"
       wallet:
         type: 
@@ -1083,6 +1142,34 @@ definitions:
       yearly:
         type: object
         description: "the average transaction per gender in a yearly basis"
+  CustomerRole:
+    type: object
+    required:
+      - customerKey
+      - role
+      - roleName
+    properties:
+      customerKey:
+        type: string
+        description: "the customer key"
+      role:
+        type: string
+        description: "the abbreviated role"
+      roleName:
+        type: string
+        description: "the new role"
+  UserRole:
+    type: object
+    required:
+      - id
+      - role
+    properties:
+      id:
+        type: number
+        description: "the user id"
+      role:
+        type: string
+        description: "the new role to be assigned"
   NewTransactionReq:
     type: object
     properties:

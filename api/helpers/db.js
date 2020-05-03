@@ -20,7 +20,9 @@ module.exports = {
   retrieveMembersCount,
   retrieveMembersLastCount,
   rerieveCustomerPointSummary,
-  rerieveNewCustomers
+  rerieveNewCustomers,
+  retrieveTodayTransactions,
+  checkUserAdminBranch
 }
 
 function* retrieveUserRole(userId) {
@@ -120,19 +122,34 @@ function* retrieveMembersLastCount(startDate) {
 }
 
 function* rerieveCustomerPointSummary(customerKey) {
-  var sql = `SELECT COALESCE(SUM(case when transaction_type = 'credit' and status = 'approved' then points else 0 end),0) as total_earnings,
+  var sql = `SELECT count(distinct(date(created_at))) as visit_counts,
+  COALESCE(SUM(case when transaction_type = 'credit' and status = 'approved' then transaction_amount else 0 end),0) as total_transaction_amount,
+  COALESCE(SUM(case when transaction_type = 'credit' and status = 'approved' then points else 0 end),0) as total_earnings,
   COALESCE(SUM(case when transaction_type = 'debit' and status = 'approved' then points else 0 end),0) as total_redeems
   FROM customer_transactions
   WHERE customer_key='${customerKey}';`
 
   let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
-  return humps.camelizeKeys(results[0]) || { total_earnings: 0, total_redeems: 0};
+  return humps.camelizeKeys(results[0]) || { total_earnings: 0, total_redeems: 0, total_transaction_amount: 0, transaction_counts: 0};
 }
 
-function* rerieveNewCustomers() {
-  var sql = `SELECT customer_key as customerKey, first_name as firstName, last_name as lastName, email FROM customers
-  WHERE DATE(created_at) = DATE_SUB(CURRENT_DATE(),INTERVAL 1 DAY);`
+function* rerieveNewCustomers(lastSynced) {
+  var sql = `SELECT customer_key as customerKey, first_name as firstName, last_name as lastName, email FROM customers`;
+  if(lastSynced != null && lastSynced != '') sql += ` WHERE DATE(created_at) = DATE_SUB(CURRENT_DATE(),INTERVAL 1 DAY);`
 
   let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
   return results;
+}
+
+function* retrieveTodayTransactions() {
+  var sql = `SELECT * FROM customer_transactions where DATE(created_at)=DATE(NOW());`;
+  let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
+  return results;
+}
+
+function* checkUserAdminBranch(user, admin) {
+  var sql = `SELECT u.* FROM users as u WHERE u.user_id = ${user} and 
+  (SELECT u2.branch_id FROM users as u2 WHERE u2.user_id = ${admin} ) = u.branch_id;`;
+  let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
+  return humps.camelizeKeys(results[0]);
 }

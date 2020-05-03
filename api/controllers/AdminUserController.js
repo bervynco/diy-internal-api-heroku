@@ -11,7 +11,11 @@ module.exports = {
     // updateUserDetail,
     // getUserActivities,
     addUser,
-    addPOSUser
+    addPOSUser,
+    getAllTodayTransactions,
+    getCustomerById,
+    updateCustomerRole,
+    updateUserRole
 };
 
 /**
@@ -84,5 +88,57 @@ function addPOSUser(req, res, next) {
 function deleteUser(req, res, next) {
     co(function* () {
         res.json(yield AdminUserService.deleteUser(req.auth, req.swagger.params.id.value));
+    }).catch(next);
+}
+
+/**
+ * GET /users/customers/transactions
+ * Returns all the transactions done for the day. non-anonymous
+ *
+ * @param req the request
+ * @param res the response
+ */
+function getAllTodayTransactions(req, res, next) {
+    co(function* () {
+        res.json(yield AdminUserService.getAllTodayTransactions(req.auth, req.swagger.params));
+    }).catch(next);
+}
+
+/**
+ * GET /users/customers/{id}
+ * Gets the details of the customer. non-anonymous
+ *
+ * @param req the request
+ * @param res the response
+ */
+function getCustomerById(req, res, next) {
+    co(function* () {
+        res.json(yield AdminUserService.getCustomerById(req.auth, req.swagger.params.id.value));
+    }).catch(next);
+}
+
+/**
+ * POST /users/customers/role
+ * Update a customer's role, non-anonymous
+ *
+ * @param req the request
+ * @param res the response
+ */
+function updateCustomerRole(req, res, next) {
+    co(function* () {
+        res.json(yield AdminUserService.updateCustomerRole(req.auth, req.swagger.params, req.body));
+    }).catch(next);
+}
+
+/**
+ * POST /users/role
+ * Update a user's role, non-anonymous
+ *
+ * @param req the request
+ * @param res the response
+ */
+function updateUserRole(req, res, next) {
+    co(function* () {
+        res.json(yield AdminUserService.updateUserRole(req.auth, req.swagger.params, req.body));
     }).catch(next);
 }

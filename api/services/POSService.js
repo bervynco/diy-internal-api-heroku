@@ -18,6 +18,7 @@ const POSUser = models.POSUser;
 const UserRole = models.UserRole;
 const Customer = models.Customer;
 const CustomerTransaction = models.CustomerTransaction;
+const CustomerRole = models.CustomerRole;
 
 module.exports = {
     getCustomerProfile,
@@ -85,13 +86,13 @@ function* earnPoints(auth, params, entity) {
     params = _.mapValues(params, function (v) {
         return v.value;
     });
-    return sequelize
+    return yield sequelize
         .transaction(
             {
                 isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
             },
             co.wrap(function* (t) {
-                if(!entity.hasOwnProperty('customerKey') && entity.hasOwnProperty('transactionDate') && entity.hasOwnProperty('transactionAmount')) 
+                if(!entity.hasOwnProperty('customerKey') && entity.hasOwnProperty('transactionDate') && entity.hasOwnProperty('transactionAmount') && !entity.hasOwnProperty('redeemPoints')) 
                     throw new errors.BadRequest('Invalid input');
                 entity.customerKey = entity.customerKey;
                 let userId = auth.userId;
@@ -100,15 +101,34 @@ function* earnPoints(auth, params, entity) {
                 if (!customer) {
                     throw new errors.NotFound('Customer not found with specified id');
                 }
+                var customerRole = yield CustomerRole.findOne({ where: { customerId: customer.id } })
                 let expirationDate = moment(entity.transactionDate).add(2, 'd');
                 if (moment().isAfter(expirationDate))
                     throw new errors.BadRequest('Transaction expired.');
                 entity.branchId = pos.branchId;
-                entity.points = Math.floor(entity.transactionAmount / 200);
+                entity.points = customerRole.role == '' ? Math.floor(entity.transactionAmount / 200) : 0;
                 entity.transactionType = "credit";
                 entity.status = "approved";
                 entity.createdAt = entity.transactionDate;
                 yield CustomerTransaction.create(entity, { transaction: t });
+                let pointSummary = yield db.rerieveCustomerPointSummary(customer.customerKey);
+                let availablePoints = 0;
+                availablePoints = pointSummary.totalEarnings + entity.points - pointSummary.totalRedeems;
+                //redeem
+                if(entity.redeemPoints > 0) {
+                    let record = {};
+                    record.customerKey = entity.customerKey;
+                    record.branchId = pos.branchId;
+                    record.points = entity.redeemPoints;
+                    record.transactionType = "debit";
+                    if(entity.redeemPoints > availablePoints)
+                        throw new errors.BadRequest('Redeem points is higher than the available balance.');
+                    record.transactionAmount = record.points;
+                    record.status = "approved";
+                    yield CustomerTransaction.create(record, { transaction: t });
+                    availablePoints =  availablePoints - entity.redeemPoints;
+                } 
+                return { availablePoints: availablePoints };
             })
         )
         .catch(function (err) {
@@ -229,7 +249,7 @@ function* getNewCustomers(auth, params, entity) {
                 let pos = yield POSUser.findByPk(userId);
                 if(moment(pos.lastSyncedAt).utc().format('MM-DD-YY') == moment().format('MM-DD-YY'))
                     throw new errors.BadRequest('POS already requested the new members for today.');
-                let newCustomers = yield db.rerieveNewCustomers();
+                let newCustomers = yield db.rerieveNewCustomers(pos.lastSyncedAt);
                 pos.lastSyncedAt = moment().format('YYYY-MM-DD HH:mm:ss');
                 yield pos.save({ transaction: t });
                 console.log(newCustomers);

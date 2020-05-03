@@ -18,6 +18,7 @@ const POSUser = models.POSUser;
 const UserRole = models.UserRole;
 const Customer = models.Customer;
 const CustomerTransaction = models.CustomerTransaction;
+const CustomerRole = models.CustomerRole;
 
 module.exports = {
     getAllUsers,
@@ -25,7 +26,11 @@ module.exports = {
     getCustomerTransactions,
     addUser,
     deleteUser,
-    addPOSUser
+    addPOSUser,
+    getAllTodayTransactions,
+    getCustomerById,
+    updateCustomerRole,
+    updateUserRole
 };
 
 /**
@@ -68,12 +73,22 @@ function* getAllCustomers(auth, params, entity) {
  *
  * @param   {Number}    id            the customer id
  */
-function* findCustomerById(id) {
-    const customer = yield Customer.findByPk(id);
+function* getCustomerById(auth, id) {
+    console.log(id)
+    let customer = yield Customer.findOne({
+        where: { customerKey: id }
+    });
 
     if (!customer) {
         throw new errors.NotFound('Customer not found with specified id');
     }
+
+    customer =  _.omit(customer.toJSON(), 'password', 'resetPasswordToken');
+    let addInfo = yield db.rerieveCustomerPointSummary(id);
+    customer.visitCounts = addInfo.visitCounts;
+    customer.totalTransactionAmount = addInfo.totalTransactionAmount;
+    customer.totalRedeemedPoints = addInfo.totalRedeems;
+    customer.balance = addInfo.totalEarnings - addInfo.totalRedeems;
 
     return customer;
 };
@@ -155,14 +170,120 @@ function* deleteUser(auth, id) {
  * @param   {Object}    [params]      the parameters for the method
  */
 function* getCustomerTransactions(auth, id, entity) {
-    var user = yield Customer.findByPk(id);
+    var user = yield Customer.findOne({
+        where: { customerKey: id }
+    });
     if (!user) {
         throw new errors.NotFound('User not found');
     }
     var transactions = yield CustomerTransaction.findAll({
-        where: { customerId: id },
+        where: { customerKey: id },
         order: [['createdAt', 'ASC']]
     });
+    let result = [];
+    for (let i = 0; i < transactions.length; i++) {
+        result.push({
+            id: transactions[i].id,
+            customerKey: transactions[i].customerKey,
+            wallet: transactions[i].wallet,
+            transactionType: transactions[i].transactionType,
+            points: transactions[i].points,
+            amount: transactions[i].transactionAmount,
+            description: transactions[i].description,
+            status: transactions[i].status,
+            expirationDate: transactions[i].expirationDate,
+            createdAt: transactions[i].createdAt,
+            updatedAt: transactions[i].updatedAt
+        })
+    };
+    return result;
+}
 
-    return transactions;
+/**
+ * Get all the customers.
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Object}    [params]      the parameters for the method
+ */
+function* getAllTodayTransactions(auth, params, entity) {
+    params = _.mapValues(params, function (v) {
+        return v.value;
+    });
+    let customerTransactions = yield db.retrieveTodayTransactions();
+
+    let result = [];
+    for (let i = 0; i < customerTransactions.length; i++) {
+        result.push({
+            id: customerTransactions[i].ct_id,
+            customerKey: customerTransactions[i].customer_key,
+            wallet: customerTransactions[i].wallet,
+            transactionType: customerTransactions[i].transaction_type,
+            amount: customerTransactions[i].transaction_amount,
+            description: customerTransactions[i].description,
+            status: customerTransactions[i].status,
+            expirationDate: customerTransactions[i].expiration_date,
+            createdAt: customerTransactions[i].created_at,
+            updatedAt: customerTransactions[i].updated_at
+        });
+    };
+
+    return result;
+}
+
+/**
+ * POST /users/customers/role
+ * Update a customer's role, non-anonymous
+ *
+ * @param auth the authorized user
+ * @param params the parameters for the method
+ */
+function* updateCustomerRole(auth, params, entity) {
+    params = _.mapValues(params, function (v) { return v.value; });
+    return sequelize.transaction({
+        isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+    }, co.wrap(function* (t) {
+        const customerKey = entity.customerKey;
+        var customer = yield Customer.findOne({
+            where: { customerKey: customerKey }
+        });
+        if (!customer)
+            throw new errors.BadRequest('Customer not found');
+        var role = yield CustomerRole.findOne({
+            where: { customerId: customer.id}
+        })
+        role.role = entity.role;
+        role.roleName = entity.roleName;
+        role.updatedBy = auth.userId;
+        yield role.save({ transaction: t });
+    })).catch(function (err) {
+        throw err;
+    });
+}
+
+/**
+ * POST /users/role
+ * Update a user's role, non-anonymous
+ *
+ * @param auth the authorized user
+ * @param params the parameters for the method
+ */
+function* updateUserRole(auth, params, entity) {
+    params = _.mapValues(params, function (v) { return v.value; });
+    return sequelize.transaction({
+        isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+    }, co.wrap(function* (t) {
+        let user = yield db.checkUserAdminBranch(entity.id, auth.userId);
+        if(!user)
+            throw new errors.BadRequest('User not allowed to modify');
+        var role = yield UserRole.findOne({
+            where: { userId: entity.id }
+        });
+        if (!role)
+            throw new errors.BadRequest('User not found');
+        role.role = entity.role;
+        role.updatedBy = auth.userId;
+        yield role.save({ transaction: t });
+    })).catch(function (err) {
+        throw err;
+    });
 }
