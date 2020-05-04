@@ -36,7 +36,7 @@ module.exports = function(sequelize, DataTypes) {
 		},
 		branchId: {
 			type: DataTypes.BIGINT,
-			allowNull: false,
+			allowNull: true,
 			references: {
 				model: 'branches',
 				key: 'branch_id'

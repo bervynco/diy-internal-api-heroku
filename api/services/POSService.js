@@ -19,6 +19,7 @@ const UserRole = models.UserRole;
 const Customer = models.Customer;
 const CustomerTransaction = models.CustomerTransaction;
 const CustomerRole = models.CustomerRole;
+const TransactionItems = models.TransactionItems;
 
 module.exports = {
     getCustomerProfile,
@@ -92,7 +93,7 @@ function* earnPoints(auth, params, entity) {
                 isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
             },
             co.wrap(function* (t) {
-                if(!entity.hasOwnProperty('customerKey') && entity.hasOwnProperty('transactionDate') && entity.hasOwnProperty('transactionAmount') && !entity.hasOwnProperty('redeemPoints')) 
+                if(!entity.hasOwnProperty('customerKey') && entity.hasOwnProperty('transactionDate') && entity.hasOwnProperty('transactionAmount') && !entity.hasOwnProperty('redeemPoints') && entity.hasOwnProperty('transactionItems')) 
                     throw new errors.BadRequest('Invalid input');
                 entity.customerKey = entity.customerKey;
                 let userId = auth.userId;
@@ -111,6 +112,11 @@ function* earnPoints(auth, params, entity) {
                 entity.status = "approved";
                 entity.createdAt = entity.transactionDate;
                 yield CustomerTransaction.create(entity, { transaction: t });
+                // record transaction items
+                if(entity.transactionItems.length > 0) {
+                    let items = entity.transactionItems.map(v => ({...v, "referenceNumber": entity.referenceNumber, "createdAt": moment().format('YYYY-MM-DD HH:mm:ss').toString()}));
+                    yield TransactionItems.bulkCreate(items);
+                }
                 let pointSummary = yield db.rerieveCustomerPointSummary(customer.customerKey);
                 let availablePoints = 0;
                 availablePoints = pointSummary.totalEarnings + entity.points - pointSummary.totalRedeems;

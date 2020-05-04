@@ -3,7 +3,7 @@
 const config = require('config');
 const Sequelize = require('sequelize');
 
-const sequelize = new Sequelize(config.db.url.dev, {
+const sequelize = new Sequelize(config.db.url.uat, {
     omitNull: false,
     underscored: true,
     logging: config.db.logging
@@ -17,6 +17,7 @@ const sequelize = new Sequelize(config.db.url.dev, {
   const POSUsersFn = require('./pos_users');
   const CustomerRoleFn = require('./customer_roles');
   const BranchesFn = require('./branches');
+  const TransactionItemsFn = require('./transaction_items');
 
   const User = UserFn(sequelize, Sequelize.DataTypes);
   const UserRole = UserRoleFn(sequelize, Sequelize.DataTypes);
@@ -26,6 +27,7 @@ const sequelize = new Sequelize(config.db.url.dev, {
   const POSUser = POSUsersFn(sequelize, Sequelize.DataTypes);
   const CustomerRole = CustomerRoleFn(sequelize, Sequelize.DataTypes);
   const Branches = BranchesFn(sequelize, Sequelize.DataTypes);
+  const TransactionItems = TransactionItemsFn(sequelize, Sequelize.DataTypes);
 
   module.exports = {
       sequelize,
@@ -37,5 +39,6 @@ const sequelize = new Sequelize(config.db.url.dev, {
       CustomerTransaction,
       POSUser,
       CustomerRole,
-      Branches
+      Branches,
+      TransactionItems
   };
