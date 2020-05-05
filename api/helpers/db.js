@@ -22,7 +22,8 @@ module.exports = {
   rerieveCustomerPointSummary,
   rerieveNewCustomers,
   retrieveTodayTransactions,
-  checkUserAdminBranch
+  checkUserAdminBranch,
+  retrieveCustomerDetails
 }
 
 function* retrieveUserRole(userId) {
@@ -152,4 +153,13 @@ function* checkUserAdminBranch(user, admin) {
   (SELECT u2.branch_id FROM users as u2 WHERE u2.user_id = ${admin} ) = u.branch_id;`;
   let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
   return humps.camelizeKeys(results[0]);
+}
+
+function* retrieveCustomerDetails(customerKey) {
+  var sql = `SELECT c.*, cr.role, cr.role_name FROM customers as c 
+  LEFT JOIN customer_roles as cr on cr.customer_id = c.customer_id`;
+  if(customerKey != '' && customerKey != null)
+    sql += ` WHERE customer_key = '${customerKey}'`;
+  let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
+  return results;
 }

@@ -3,7 +3,7 @@
 const config = require('config');
 const Sequelize = require('sequelize');
 
-const sequelize = new Sequelize(config.db.url.uat, {
+const sequelize = new Sequelize(config.db.url.dev, {
     omitNull: false,
     underscored: true,
     logging: config.db.logging

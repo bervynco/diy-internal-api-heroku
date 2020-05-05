@@ -58,13 +58,28 @@ function* getAllCustomers(auth, params, entity) {
     params = _.mapValues(params, function (v) {
         return v.value;
     });
-    var customers = yield Customer.findAll();
+    var customers = yield db.retrieveCustomerDetails();
+    let result = [];
     for (let i = 0; i < customers.length; i++) {
-        customers[i]["birthday"] = moment.utc(customers[i]["birthday"]).format('YYYY-MM-DD');
-        customers[i] = _.omit(customers[i].toJSON(), 'password', 'resetPasswordToken');
+        result.push({
+            id: customers[i].customer_id,
+            customerKey: customers[i].customer_key,
+            firstName: customers[i].first_name,
+            lastName: customers[i].last_name,
+            email: customers[i].email,
+            gender: customers[i].gender,
+            isActive: customers[i].is_active !=0 ? true : false,
+            city: customers[i].city,
+            birthday: customers[i]["birthday"] != null ? moment.utc(customers[i]["birthday"]).format('YYYY-MM-DD') : null,
+            contactNumber: customers[0].contact_number,
+            role: customers[i].role,
+            roleName: customers[i].role_name,
+            createdAt: customers[i].created_at,
+            updatedAt: customers[i].updated_at
+        })
     };
-    console.log(customers)
-    return customers;
+    console.log(result)
+    return result;
 }
 
 /**

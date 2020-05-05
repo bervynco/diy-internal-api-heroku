@@ -38,24 +38,33 @@ module.exports = {
  */
 function* getCustomerProfile(auth, entity) {
     if(!entity.hasOwnProperty('customerKey')) throw new errors.BadRequest('Customer Key is not defined');
-    let userKey = entity.customerKey;
-    // userId = Buffer.from(userId, 'base64').toString('ascii');
-    // userId = Buffer.from(userId, 'base64').toString('ascii');
-    // var n = userId.indexOf(' ');
-    // userId = userId.substring(n != -1 ? n+1 : userId.length, userId.length);
-    var customer = yield Customer.findOne({ where: { customerKey: userKey } });
-    if (!customer) {
+    let customerKey = entity.customerKey;
+    let customer = yield db.retrieveCustomerDetails(customerKey);
+    let result = {};
+
+    if (customer.length == 0) {
         throw new errors.NotFound('Customer not found with specified id');
     }
-    customer["birthday"] = customer["birthday"] != null ? moment.utc(customer["birthday"]).format('YYYY-MM-DD') : null;
-    customer = _.omit(customer.toJSON(), 'password', 'resetPasswordToken');
-    let pointSummary = yield db.rerieveCustomerPointSummary(userKey);
-    customer.availablePoints = pointSummary.totalEarnings - pointSummary.totalRedeems;
-    //let test = Buffer.from(`id: ${userId}`).toString('base64');
-    //test = Buffer.from(test).toString('base64');
-    // console.log(test);
-    // console.log(Buffer.from(test, 'base64').toString('ascii'))
-    return customer;
+    result = {
+        id: customer[0].customer_id,
+        customerKey: customerKey,
+        firstName: customer[0].first_name,
+        lastName: customer[0].last_name,
+        email: customer[0].email,
+        gender: customer[0].gender,
+        isActive: customer[0].is_active !=0 ? true : false,
+        city: customer[0].city,
+        birthday: customer[0]["birthday"] != null ? moment.utc(customer[0]["birthday"]).format('YYYY-MM-DD') : null,
+        contactNumber: customer[0].contact_number,
+        role: customer[0].role,
+        roleName: customer[0].role_name,
+        createdAt: customer[0].created_at,
+        updatedAt: customer[0].updated_at
+    }
+    
+    let pointSummary = yield db.rerieveCustomerPointSummary(customerKey);
+    result.availablePoints = pointSummary.totalEarnings - pointSummary.totalRedeems;
+    return result;
 }
 
 /**
