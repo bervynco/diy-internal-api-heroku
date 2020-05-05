@@ -135,7 +135,8 @@ function* rerieveCustomerPointSummary(customerKey) {
 }
 
 function* rerieveNewCustomers(lastSynced) {
-  var sql = `SELECT customer_key as customerKey, first_name as firstName, last_name as lastName, email FROM customers`;
+  // var sql = `SELECT customer_key as customerKey, first_name as firstName, last_name as lastName, email FROM customers`;
+  var sql = 'SELECT customer_key as customerKey, first_name as firstName, last_name as lastName, email, customer_roles.role FROM customers LEFT JOIN customer_roles on customers.customer_id = customer_roles.customer_id';
   if(lastSynced != null && lastSynced != '') sql += ` WHERE DATE(created_at) = DATE_SUB(CURRENT_DATE(),INTERVAL 1 DAY);`
 
   let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
