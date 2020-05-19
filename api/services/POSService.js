@@ -26,8 +26,10 @@ module.exports = {
     getCustomerBalance,
     earnPoints,
     returnTransaction,
+    voidTransaction,
     redeemPoints,
-    getNewCustomers
+    getNewCustomers,
+    reconciliation
 };
 
 /**
@@ -122,8 +124,9 @@ function* earnPoints(auth, params, entity) {
                 entity.createdAt = entity.transactionDate;
                 yield CustomerTransaction.create(entity, { transaction: t });
                 // record transaction items
+                let date = moment().format('YYYY-MM-DD HH:mm:ss').toString();
                 if(entity.transactionItems.length > 0) {
-                    let items = entity.transactionItems.map(v => ({...v, "referenceNumber": entity.referenceNumber, "createdAt": moment().format('YYYY-MM-DD HH:mm:ss').toString()}));
+                    let items = entity.transactionItems.map(v => ({...v, "referenceNumber": entity.referenceNumber, "status": "active", "createdAt": date, "updatedAt": date}));
                     yield TransactionItems.bulkCreate(items);
                 }
                 let pointSummary = yield db.rerieveCustomerPointSummary(customer.customerKey);
@@ -169,6 +172,8 @@ function* returnTransaction(auth, params, entity) {
             },
             co.wrap(function* (t) {
                 if(!entity.hasOwnProperty('customerKey')) throw new errors.BadRequest('Customer Key is not defined');
+                if(entity.hasOwnProperty('transactionDate') && entity.hasOwnProperty('transactionAmount') && !entity.hasOwnProperty('redeemPoints') && entity.hasOwnProperty('transactionItems') && entity.hasOwnProperty('newReferenceNumber') && entity.hasOwnProperty('newTransactionItems')) 
+                    throw new errors.BadRequest('Invalid input');
                 entity.customerKey = entity.customerKey;
                 let userId = auth.userId;
                 const pos = yield POSUser.findByPk(userId);
@@ -179,12 +184,23 @@ function* returnTransaction(auth, params, entity) {
                 var transaction = yield CustomerTransaction.findOne({ 
                     where: { customerKey: entity.customerKey, 
                     referenceNumber: entity.referenceNumber } 
-                });                
-                if(transaction.transactionAmount > entity.transactionAmount) {
-                    throw new errors.NotFound('New transaction amount should be higher from the previous transaction.');
-                };
+                });
                 if (!transaction) {
                     throw new errors.NotFound('Transaction not found with specified id');
+                };
+                for (let i = 0; i < entity.transactionItems.length; i++) {
+                    yield TransactionItems.update({
+                        status: 'returned'}, { 
+                        where: { 
+                            referenceNumber: entity.referenceNumber,
+                            itemCode: entity.transactionItems[i]
+                        },
+                        individualHooks: true }
+                    );
+                }
+                
+                if(transaction.transactionAmount > entity.transactionAmount) {
+                    throw new errors.NotFound('New transaction amount should be higher from the previous transaction.');
                 };
                 transaction.transactionAmount = entity.transactionAmount;
                 transaction.points = Math.floor(entity.transactionAmount / 200);
@@ -199,6 +215,120 @@ function* returnTransaction(auth, params, entity) {
         });
 }
 
+/**
+ * Void the transaction of the customer. non-anonymous
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Object}    [params]      the parameters for the method
+ */
+function* voidTransaction(auth, params, entity) {
+    params = _.mapValues(params, function (v) {
+        return v.value;
+    });
+    return yield sequelize
+        .transaction(
+            {
+                isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+            },
+            co.wrap(function* (t) {
+                if(!entity.hasOwnProperty('customerKey') && entity.hasOwnProperty('transactionDate') && entity.hasOwnProperty('transactionAmount') && !entity.hasOwnProperty('redeemPoints') && entity.hasOwnProperty('transactionItems')) 
+                    throw new errors.BadRequest('Invalid input');
+                entity.customerKey = entity.customerKey;
+                let userId = auth.userId;
+                const pos = yield POSUser.findByPk(userId);
+                var customer = yield Customer.findOne({ where: { customerKey: entity.customerKey } });
+                if (!customer) {
+                    throw new errors.NotFound('Customer not found with specified id');
+                }
+                var transaction = yield CustomerTransaction.findOne({ 
+                    where: { customerKey: entity.customerKey, 
+                    referenceNumber: entity.referenceNumber } 
+                });
+                if (!transaction) {
+                    throw new errors.NotFound('Transaction not found with specified id');
+                };
+                yield TransactionItems.update({
+                    status: 'void'}, { 
+                    where: { referenceNumber: entity.referenceNumber },
+                    individualHooks: true }
+                );
+                yield CustomerTransaction.update(
+                    { status: 'declined' }, 
+                    { where: { customerKey: entity.customerKey, 
+                        referenceNumber: entity.referenceNumber }
+                });
+                let pointSummary = yield db.rerieveCustomerPointSummary(customer.customerKey);
+                return { availablePoints: pointSummary.totalEarnings - pointSummary.totalRedeems};
+            })
+        )
+        .catch(function (err) {
+            throw err;
+        });
+}
+
+/**
+ * Add transactions that is not listed within the day. non-anonymous
+ *
+ * @param   {Object}    auth          the currently authenticated user
+ * @param   {Object}    [params]      the parameters for the method
+ */
+function* reconciliation(auth, params, entity) {
+    params = _.mapValues(params, function (v) {
+        return v.value;
+    });
+    return yield sequelize
+        .transaction(
+            {
+                isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.SERIALIZABLE
+            },
+            co.wrap(function* (t) {
+                let userId = auth.userId;
+                const pos = yield POSUser.findByPk(userId);
+                for (let i = 0; i < entity.length; i++) {
+                    var customer = yield Customer.findOne({ where: { customerKey: entity[i].customerKey } });
+                    if (!customer) {
+                        throw new errors.NotFound('Customer not found with specified id');
+                    }
+                    var customerRole = yield CustomerRole.findOne({ where: { customerId: customer.id } })
+                    let expirationDate = moment(entity[i].transactionDate).add(2, 'd');
+                    if (moment().isAfter(expirationDate))
+                        throw new errors.BadRequest('Transaction expired.');
+                    entity[i].branchId = pos.branchId;
+                    entity[i].points = customerRole.role == '' ? Math.floor(entity[i].transactionAmount / 200) : 0;
+                    entity[i].transactionType = "credit";
+                    entity[i].status = "approved";
+                    entity[i].createdAt = entity[i].transactionDate;
+                    yield CustomerTransaction.create(entity[i], { transaction: t });
+                    // record transaction items
+                    let date = moment().format('YYYY-MM-DD HH:mm:ss').toString();
+                    if(entity[i].transactionItems.length > 0) {
+                        let items = entity[i].transactionItems.map(v => ({...v, "referenceNumber": entity[i].referenceNumber, "status": "active", "createdAt": date, "updatedAt": date}));
+                        yield TransactionItems.bulkCreate(items);
+                    }
+                    let pointSummary = yield db.rerieveCustomerPointSummary(customer.customerKey);
+                    let availablePoints = 0;
+                    availablePoints = pointSummary.totalEarnings + entity.points - pointSummary.totalRedeems;
+                    //redeem
+                    if(entity[i].redeemPoints > 0) {
+                        let record = {};
+                        record.customerKey = entity[i].customerKey;
+                        record.branchId = pos.branchId;
+                        record.points = entity[i].redeemPoints;
+                        record.transactionType = "debit";
+                        if(entity[i].redeemPoints > availablePoints)
+                            throw new errors.BadRequest('Redeem points is higher than the available balance.');
+                        record.transactionAmount = record.points;
+                        record.status = "approved";
+                        yield CustomerTransaction.create(record, { transaction: t });
+                        availablePoints =  availablePoints - entity[i].redeemPoints;
+                    }
+                }
+            })
+        )
+        .catch(function (err) {
+            throw err;
+        });
+}
 
 /**
  * Redeems the points of the customer. non-anonymous

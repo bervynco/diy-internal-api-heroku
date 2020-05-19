@@ -29,10 +29,20 @@ module.exports = function(sequelize, DataTypes) {
 			allowNull: false,
 			field: 'item_quantity'
 		},
+		status: {
+			type: DataTypes.ENUM('active','returned','void'),
+			allowNull: true,
+			field: 'status'
+		},
 		createdAt: {
 			type: 'TIMESTAMP',
 			allowNull: false,
 			field: 'created_at'
+		},
+		updatedAt: {
+			type: 'TIMESTAMP',
+			allowNull: false,
+			field: 'updated_at'
 		},
 	}, {
 		tableName: 'transaction_items',
@@ -43,14 +53,16 @@ module.exports = function(sequelize, DataTypes) {
 			beforeCreate: function(instance, options) {
 				const milliseconds = require('moment')().format('YYYY-MM-DD HH:mm:ss').toString();
 				instance.createdAt = milliseconds;
+				instance.updatedAt = milliseconds;
 			},
-			// beforeUpdate: function(instance, options) {
-			// 	const milliseconds = require('moment')().format('YYYY-MM-DD HH:mm:ss').toString();
-			// 	instance.updatedAt = milliseconds;
-			// },
+			beforeUpdate: function(instance, options) {
+				const milliseconds = require('moment')().format('YYYY-MM-DD HH:mm:ss').toString();
+				instance.updatedAt = milliseconds;
+			},
 			beforeValidate: function(instance, options) {
 				const milliseconds = require('moment')().format('YYYY-MM-DD HH:mm:ss').toString();
 				if (!instance.createdAt) instance.createdAt = milliseconds;
+				if (!instance.updatedAt) instance.updatedAt = milliseconds;
 			}
 		}
 	});

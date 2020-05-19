@@ -9,7 +9,9 @@ module.exports = {
     earnPoints,
     returnTransaction,
     redeemPoints,
-    getNewCustomers
+    getNewCustomers,
+    voidTransaction,
+    reconciliation
 };
 
 /**
@@ -63,6 +65,34 @@ function earnPoints(req, res, next) {
 function returnTransaction(req, res, next) {
     co(function* () {
         res.json(yield POSService.returnTransaction(req.auth, req.swagger.params, req.body));
+    }).catch(next);
+}
+
+/**
+ * POST /customers/void
+ * Void the transaction of the customer. non-anonymous
+ *
+ * @param req the request
+ * @param res the response
+ * @param next the next step in the middleware flow
+ */
+function voidTransaction(req, res, next) {
+    co(function* () {
+        res.json(yield POSService.voidTransaction(req.auth, req.swagger.params, req.body));
+    }).catch(next);
+}
+
+/**
+ * POST /customers/reconciliation
+ * Add transactions that is not listed within the day. non-anonymous
+ *
+ * @param req the request
+ * @param res the response
+ * @param next the next step in the middleware flow
+ */
+function reconciliation(req, res, next) {
+    co(function* () {
+        res.json(yield POSService.reconciliation(req.auth, req.swagger.params, req.body));
     }).catch(next);
 }
 

@@ -27,8 +27,5 @@
   "scripts": {
     "start": "node app.js",
     "test": "swagger project test"
-  },
-  "engines": {
-    "node": "10.16"
   }
 }
