@@ -406,48 +406,6 @@ paths:
           description: "if the specified customer key is not found"
           schema:
             $ref: "#/definitions/ErrorDetail"
-  /pos/customers/return:
-    x-swagger-router-controller: POSController
-    post:
-      description: "Updates the transaction amount of the customer. non-anonymous"
-      operationId: returnTransaction
-      security:
-        - jwt: []
-      x-access-control:
-        role: 
-          - "pos"
-      produces:
-        - application/json
-      consumes:
-        - application/json
-      parameters:
-        - in: header
-          name: Authorization
-          description: "Bearer access token in format Bearer {{accessToken}}"
-          required: true
-          type: string
-          format: string
-        - in: body
-          name: body
-          description: "the details of the transactions"
-          required: true
-          schema:
-            type: object
-      responses:
-        "200":
-          description: "successful operation"
-        "400":
-          description: "the validation failed, client request is invalid"
-          schema:
-            $ref: "#/definitions/ErrorDetail"
-        "401":
-          description: "access token is not valid"
-          schema:
-            $ref: "#/definitions/ErrorDetail"
-        "404":
-          description: "if the specified customer key is not found"
-          schema:
-            $ref: "#/definitions/ErrorDetail"
   /pos/customers/void:
     x-swagger-router-controller: POSController
     post:

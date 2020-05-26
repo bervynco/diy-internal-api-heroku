@@ -106,7 +106,6 @@ function* earnPoints(auth, params, entity) {
             co.wrap(function* (t) {
                 if(!entity.hasOwnProperty('customerKey') && entity.hasOwnProperty('transactionDate') && entity.hasOwnProperty('transactionAmount') && !entity.hasOwnProperty('redeemPoints') && entity.hasOwnProperty('transactionItems')) 
                     throw new errors.BadRequest('Invalid input');
-                entity.customerKey = entity.customerKey;
                 let userId = auth.userId;
                 const pos = yield POSUser.findByPk(userId);
                 var customer = yield Customer.findOne({ where: { customerKey: entity.customerKey } });
@@ -118,20 +117,78 @@ function* earnPoints(auth, params, entity) {
                 if (moment().isAfter(expirationDate))
                     throw new errors.BadRequest('Transaction expired.');
                 entity.branchId = pos.branchId;
-                entity.points = customerRole.role == '' ? Math.floor(entity.transactionAmount / 200) : 0;
-                entity.transactionType = "credit";
-                entity.status = "approved";
-                entity.createdAt = entity.transactionDate;
-                yield CustomerTransaction.create(entity, { transaction: t });
+                //FOR RETURN
+                if(entity.oldReferenceNumber != '') {
+                    var oldTransaction = yield db.retrieveTransactionItems(entity.customerKey, entity.oldReferenceNumber, 'active');
+                    if (oldTransaction.length == 0) {
+                        throw new errors.NotFound('Transaction not found with specified id');
+                    };
+                    let returnedTotalPrice = 0;
+                    for (let i = 0; i < entity.oldTransactionItems.length; i++) {
+                        let originalRecord = oldTransaction.find(item => {return item.item_code === entity.oldTransactionItems[i].itemCode});
+                        if(originalRecord != undefined) {
+                            returnedTotalPrice += parseFloat(entity.oldTransactionItems[i].itemTotalPrice);
+                            if(originalRecord.item_quantity > entity.oldTransactionItems[i].itemQuantity) {
+                                yield TransactionItems.update({
+                                    itemQuantity: entity.oldTransactionItems[i].itemQuantity,
+                                    itemTotalPrice: entity.oldTransactionItems[i].itemTotalPrice,
+                                    status: 'returned'}, { 
+                                    where: { 
+                                        referenceNumber: entity.oldReferenceNumber,
+                                        itemCode: entity.oldTransactionItems[i].itemCode
+                                    }
+                                });
+                                let remainingQuantity = originalRecord.item_quantity - entity.oldTransactionItems[i].itemQuantity;
+                                let newTotalPrice = (originalRecord.item_total_price / originalRecord.item_quantity) * remainingQuantity;
+                                yield TransactionItems.create({
+                                    referenceNumber: entity.oldReferenceNumber,
+                                    itemCode: entity.oldTransactionItems[i].itemCode,
+                                    itemDescription: entity.oldTransactionItems[i].itemDescription,
+                                    itemQuantity: remainingQuantity,
+                                    itemTotalPrice: newTotalPrice,
+                                    status: "active"
+                                });
+                            } else {
+                                yield TransactionItems.update({
+                                    status: 'returned'}, { 
+                                    where: { 
+                                        referenceNumber: entity.oldReferenceNumber,
+                                        itemCode: entity.transactionItems[i].itemCode
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    let newAmount = oldTransaction[0].transaction_amount - returnedTotalPrice;
+                    yield CustomerTransaction.update({
+                        transactionAmount: newAmount,
+                        points: customerRole.role == '' ? Math.floor(newAmount / 200) : 0}, { 
+                        where: { 
+                            referenceNumber: entity.oldReferenceNumber,
+                            customerKey: entity.customerKey
+                        }}
+                    );
+                }
+                //FOR EARN
+                yield CustomerTransaction.create({
+                    customerKey: entity.customerKey,
+                    branchId: pos.branchId,
+                    transactionAmount: entity.transactionAmount,
+                    points: customerRole.role == '' ? Math.floor(entity.transactionAmount / 200) : 0,
+                    transactionType: "credit",
+                    status: "approved",
+                    referenceNumber: entity.referenceNumber
+                });
                 // record transaction items
                 let date = moment().format('YYYY-MM-DD HH:mm:ss').toString();
                 if(entity.transactionItems.length > 0) {
                     let items = entity.transactionItems.map(v => ({...v, "referenceNumber": entity.referenceNumber, "status": "active", "createdAt": date, "updatedAt": date}));
                     yield TransactionItems.bulkCreate(items);
                 }
-                let pointSummary = yield db.rerieveCustomerPointSummary(customer.customerKey);
+
+                let pointSummary = yield db.rerieveCustomerPointSummary(entity.customerKey);
                 let availablePoints = 0;
-                availablePoints = pointSummary.totalEarnings + entity.points - pointSummary.totalRedeems;
+                availablePoints = pointSummary.totalEarnings - pointSummary.totalRedeems;
                 //redeem
                 if(entity.redeemPoints > 0) {
                     let record = {};
@@ -145,7 +202,7 @@ function* earnPoints(auth, params, entity) {
                     record.status = "approved";
                     yield CustomerTransaction.create(record, { transaction: t });
                     availablePoints =  availablePoints - entity.redeemPoints;
-                } 
+                }
                 return { availablePoints: availablePoints };
             })
         )

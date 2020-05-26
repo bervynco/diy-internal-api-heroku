@@ -29,6 +29,11 @@ module.exports = function(sequelize, DataTypes) {
 			allowNull: false,
 			field: 'item_quantity'
 		},
+		itemTotalPrice: {
+			type: DataTypes.STRING,
+			allowNull: true,
+			field: 'item_total_price'
+		},
 		status: {
 			type: DataTypes.ENUM('active','returned','void'),
 			allowNull: true,

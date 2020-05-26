@@ -23,7 +23,8 @@ module.exports = {
   rerieveNewCustomers,
   retrieveTodayTransactions,
   checkUserAdminBranch,
-  retrieveCustomerDetails
+  retrieveCustomerDetails,
+  retrieveTransactionItems
 }
 
 function* retrieveUserRole(userId) {
@@ -161,6 +162,15 @@ function* retrieveCustomerDetails(customerKey) {
   LEFT JOIN customer_roles as cr on cr.customer_id = c.customer_id`;
   if(customerKey != '' && customerKey != null)
     sql += ` WHERE customer_key = '${customerKey}'`;
+  let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
+  return results;
+}
+
+function* retrieveTransactionItems(customerKey, referenceNumber, status) {
+  var sql = `SELECT ti.*, ct.transaction_amount FROM customer_transactions as ct 
+  JOIN transaction_items as ti ON ti.reference_number = ct.reference_number 
+  WHERE ct.customer_key = '${customerKey}' AND ct.reference_number = '${referenceNumber}'`;
+  if(status != '') sql += ` AND ti.status = '${status}'`
   let results = yield sequelize.query(sql, { type: sequelize.QueryTypes.SELECT });
   return results;
 }

@@ -85,11 +85,13 @@ module.exports = function(sequelize, DataTypes) {
 				instance.updatedAt = milliseconds;
 			},
 			beforeUpdate: function(instance, options) {
-				console.log("UDPATE", instance.updatedAt)
+				console.log("UDPATE", instance)
 				const milliseconds = require('moment')().format('YYYY-MM-DD HH:mm:ss').toString();
 				instance.updatedAt = milliseconds;
 			},
 			beforeValidate: function(instance, options) {
+				
+				console.log("beforeValidatebeforeValidatebeforeValidatebeforeValidate", instance)
 				const milliseconds = require('moment')().format('YYYY-MM-DD HH:mm:ss').toString();
 				if (!instance.createdAt) instance.createdAt = milliseconds;
 				if (!instance.updatedAt) instance.updatedAt = milliseconds;
